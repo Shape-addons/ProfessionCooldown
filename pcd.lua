@@ -235,12 +235,15 @@ function InitDbTable()
 
     if (not PcdDb) then
         logIfLevel (1, "created outer level PcdDb")
-        PcdDb = {}        
+        PcdDb = {}
     end
     if (not PcdDb[charName]) then
         PcdDb[charName] = {}
+        logIfLevel (1, "created PcdDb[char]")
+    end
+    if not PcdDb[charName]["professions"] then
         PcdDb[charName]["professions"] = {}
-        logIfLevel (1, "created char[professions]")
+        logIfLevel (1, "created PcdDb[char][professions]")
     end
     if (not PcdDb["settings"]) then
         PcdDb["settings"] = {}
@@ -428,8 +431,38 @@ function ResetPosition()
     end
 end
 
+function PrintHelp()
+    print("Profession Cooldown (PCD) tracks your profession cooldowns. type /pcd to toggle the main frame visibility.")
+    print("Cooldowns are updated when you open or close the given profession. Cooldowns are only added to the list once they are on cooldown, but will show up after that.")
+    print("Drag the window to change its position. Close it by clicking 'X' button or press the Escape key")
+end
+
+function StartsWith(msg, pattern)
+    return msg:find("^" .. pattern) ~= nil
+end
+
+function GetTextAfter(msg, str)
+    if msg and str and string.len(msg) >= string.len(str) then
+        return string.sub(msg, string.len(str) + 1, string.len(msg))
+    end
+end
+
+function Capitalize(str)
+    return str:gsub("(%a)([%w_']*)", function(first, rest) return first:upper()..rest:lower() end)
+end
+
+function ResetCharacter(message)
+    local charNameToReset = Capitalize(GetTextAfter(message, "reset "))
+    if PcdDb and PcdDb[charNameToReset] then
+        PcdDb[charNameToReset] = {}
+        print ("PCD: Data for '" .. charNameToReset .. "' has been reset.")
+        return
+    end
+    print ("Could not find data for '" .. charNameToReset .. "'.")
+end
+
 function FreshInit()
-    PcdDb = nil
+    PcdDb = {}
 end
 
 SLASH_PCD1 = "/pcd"
@@ -445,9 +478,13 @@ SlashCmdList["PCD"] = function(msg)
         ResetPosition()
     elseif msg == "resetalldata" then
         FreshInit()
+    elseif StartsWith(msg, "reset") then
+        ResetCharacter(msg)
     elseif msg == "db 1" then
         debugLevel = 1
     elseif msg == "db 2" then
         debugLevel = 2
+    elseif msg == "help" then
+        PrintHelp()
     end
 end 

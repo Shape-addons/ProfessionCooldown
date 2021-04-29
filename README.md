@@ -8,10 +8,9 @@ Your profession window has to be open, in order to record active cooldowns. Curr
 - Jewelcrafting: Brilliant Glass
 - Tailoring: Mooncloth and TBC cloths
 
-
 ## Commands:
 
 - /pcd - toggles the visibility of the window.
 - /reset - resets the position of the window.
 - /resetalldata - resets all data for the addon.
- 
+- /reset charactername - resets the data for the given charactername. Useful if changing professions or deleting a character.
