@@ -172,7 +172,7 @@ local classicTransmuteSkillNamesAfterPatch = {
 
 local tbcTransmuteSkillNames = {
     ["Transmute: Primal Might"] = true,
-    ["Transmute: Primal Mana to fIRE"] = true,
+    ["Transmute: Primal Mana to Fire"] = true,
     ["Transmute: Primal Earth to Life"] = true,
     ["Transmute: Primal Shadow to Water"] = true,
     ["Transmute: Skyfire Diamond"] = true,
