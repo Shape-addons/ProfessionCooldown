@@ -248,6 +248,9 @@ function InitDbTable()
     if (not PcdDb["settings"]) then
         PcdDb["settings"] = {}
     end
+    if (not PcdDb["settings"]["CloseOnEscape"]) then
+        PcdDb["settings"]["CloseOnEscape"] = true
+    end
     if (not next(PcdDb[charName]["professions"])) then
         UpdateCharacterProfessionDb()
         logIfLevel(1, "Updated character prof db")
@@ -365,8 +368,61 @@ function GetAllNamesAndCdsOnAccount()
     return charSpellAndCd
 end
 
+pcdOptionsFrame = CreateFrame("Frame", "PcdOptionsFrame", UIParent)
+function CreatePcdOptionsFrame()
+    if not pcdOptionsFrame.close then 
+        pcdOptionsFrame.close = CreateFrame("Button", "$parentClose", pcdOptionsFrame, "UIPanelCloseButton")
+    end
+    pcdOptionsFrame.close:SetSize(24, 24)
+    pcdOptionsFrame.close:SetPoint("TOPRIGHT")
+    pcdOptionsFrame.close:SetScript("OnClick", function(self) self:GetParent():Hide(); end)
+
+    if PcdDb and PcdDb["settings"] and PcdDb["settings"]["CloseOnEscape"] == "y" then
+        EnableCloseOnEscape(false)
+    end
+    if not (pcdOptionsFrame.CloseOnEscape) then
+        pcdOptionsFrame.CloseOnEscape = CreateFrame("CheckButton", "CloseOnEscape_CheckButton", pcdOptionsFrame, "ChatConfigCheckButtonTemplate")
+    end
+    if not (pcdOptionsFrame.CloseOnEscapeText) then
+        pcdOptionsFrame.CloseOnEscapeText = pcdOptionsFrame:CreateFontString(nil, "OVERLAY")
+    end
+    pcdOptionsFrame.CloseOnEscapeText:SetFontObject("GameFontHighlight")
+    pcdOptionsFrame.CloseOnEscapeText:SetPoint("TOPLEFT", 40, -40)
+    pcdOptionsFrame.CloseOnEscapeText:SetText("Close on escape (disable requires reload)")
+    pcdOptionsFrame.CloseOnEscapeText:SetFont("Fonts\\FRIZQT__.ttf", 11, "OUTLINE")
+    
+    if PcdDb["settings"]["CloseOnEscape"] == "y" then
+        pcdOptionsFrame.CloseOnEscape:SetChecked(PcdDb["settings"]["CloseOnEscape"])
+    else
+        pcdOptionsFrame.CloseOnEscape:SetChecked(nil)
+    end
+    pcdOptionsFrame.CloseOnEscape:SetPoint("TOPLEFT", 350, -34)
+    pcdOptionsFrame.CloseOnEscape:SetScript("OnClick", 
+        function()
+            local isChecked = pcdOptionsFrame.CloseOnEscape:GetChecked()
+            if (isChecked) then
+                pcdOptionsFrame.CloseOnEscape:SetChecked(true)
+                PcdDb["settings"]["CloseOnEscape"] = "y"
+                EnableCloseOnEscape(true)
+            else
+                pcdOptionsFrame.CloseOnEscape:SetChecked(nil)
+                PcdDb["settings"]["CloseOnEscape"] = "n"
+                DisableCloseOnEscape(true)
+            end
+        end)
+    
+    pcdOptionsFrame.CloseOnEscape:Show()
+    pcdOptionsFrame.CloseOnEscape.tooltip = "If checked, Pcd frames will close when hitting the escape key"
+    SetFrameTitle(pcdOptionsFrame, "PCD options")
+    RegisterFrameForDrag(pcdOptionsFrame)
+    
+    pcdOptionsFrame:Show()
+    pcdOptionsFrame:SetPoint("CENTER", UIParent, "CENTER")
+    pcdOptionsFrame:SetSize(400, 100)
+end
+
 pcdFrame = CreateFrame("Frame", "PCDOverviewFrame", UIParent)
-tinsert(UISpecialFrames, pcdFrame:GetName())
+pcdFrame:Hide()
 function CreatePCDFrame()
     pcdFrame:ClearAllPoints()
     pcdFrame:Hide()
@@ -383,8 +439,9 @@ function CreatePCDFrame()
     else
         pcdFrame:SetPoint("CENTER", UIParent, "CENTER")
     end
-    if pcdFrame and pcdFrame:IsShown() then
-        pcdFrame:Hide()
+
+    if PcdDb and PcdDb["settings"] and PcdDb["settings"]["CloseOnEscape"] == "y" then
+        EnableCloseOnEscape(false)
     end
     SetFrameTitle(pcdFrame, "Profession CD Tracker")
     RegisterFrameForDrag(pcdFrame)
@@ -423,6 +480,26 @@ function CreatePCDFrame()
     end
     pcdFrame:Show()
     logIfLevel (1, "PCD frame created")
+end
+
+function EnableCloseOnEscape(shouldPrint)
+    if PcdDb and PcdDb["settings"] then
+        PcdDb["settings"]["CloseOnEscape"] = "y"
+        if (shouldPrint) then
+            print ("Enabled 'Close on escape'.")
+        end
+    end
+    tinsert(UISpecialFrames, pcdFrame:GetName())
+    tinsert(UISpecialFrames, pcdOptionsFrame:GetName())
+end
+
+function DisableCloseOnEscape(shouldPrint)
+    if PcdDb and PcdDb["settings"] then
+        PcdDb["settings"]["CloseOnEscape"] = "n"
+        if (shouldPrint) then
+            print ("Disabled 'Close On Escape'. Reload UI (/reload) for this to take effect.")
+        end
+    end
 end
 
 function ResetPosition()
@@ -474,6 +551,9 @@ SlashCmdList["PCD"] = function(msg)
             GetProfessionCooldowns()
             CreatePCDFrame()
         end
+    elseif msg == "options" then
+        InitDbTable()
+        CreatePcdOptionsFrame()
     elseif msg == "reset" then
         ResetPosition()
     elseif msg == "resetalldata" then
