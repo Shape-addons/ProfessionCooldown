@@ -1,17 +1,23 @@
 -- PCD start
 local pcdVersion = "1.04"
 pcdUpdateFromSpellId = nil
-
+local pcdIsLoaded = nil
 local profCdTrackerFrame = CreateFrame("Frame")
 profCdTrackerFrame:RegisterEvent("TRADE_SKILL_SHOW")
 profCdTrackerFrame:RegisterEvent("TRADE_SKILL_UPDATE")
 profCdTrackerFrame:RegisterEvent("TRADE_SKILL_CLOSE")
-profCdTrackerFrame:SetScript("OnEvent", function(self, event, ...)
+profCdTrackerFrame:RegisterEvent("ADDON_LOADED")
+profCdTrackerFrame:SetScript("OnEvent", function(self, event, arg1, ...)
     if (event == "TRADE_SKILL_SHOW" or event == "TRADE_SKILL_UPDATE" or event == "TRADE_SKILL_CLOSE") then
         GetProfessionCooldowns()
         if pcdFrame and pcdFrame:IsShown() then
             pcdFrame:Hide()
             CreatePCDFrame()
+        end
+    elseif not pcdIsLoaded and ((event == "ADDON_LOADED" and arg1 == "ProfessionCooldown") or event == "PLAYER_LOGIN") then
+        pcdIsLoaded = true
+        if PcdDb and PcdDb["settings"] then
+            pcdUpdateFromSpellId = PcdDb["settings"]["UpdateFromSpellId"]
         end
     end
 end)
@@ -121,7 +127,7 @@ function UpdateTo0103()
                     lastReadyAt = math.max(lastReadyAt, lastReadyAtTbc)
                 end
                 PcdDb[charName]["professions"]["Alchemy"]["cooldowns"]["Transmute"] = lastReadyAt
-            end
+            end 
         end
         PcdDb["settings"]["version"] = "1.03"
     end
@@ -680,9 +686,9 @@ function EnableUpdateFromSpellId(shouldPrint)
 end
 
 function DisableUpdateFromSpellId(shouldPrint)
-    pcdUpdateFromSpellId = true
+    -- pcdUpdateFromSpellId = nil
     if PcdDb["settings"] then
-        PcdDb["settings"]["UpdateFromSpellId"] = "y"
+        PcdDb["settings"]["UpdateFromSpellId"] = "n"
     end
     print ('Disabled cooldown updates from spell id (BETA). Can still be manually called by using "/pcd update" from macro or chat command.')
 end
@@ -761,6 +767,8 @@ function UpdatePcdDb()
         UpdateTo0104()
     end
 end
+
+
 
 SLASH_PCD1 = "/pcd"
 SlashCmdList["PCD"] = function(msg)
