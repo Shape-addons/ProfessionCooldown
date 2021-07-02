@@ -1,5 +1,5 @@
 -- PCD start
-local pcdVersion = "1.04"
+local pcdVersion = "1.06"
 pcdUpdateFromSpellId = nil
 local pcdIsLoaded = nil
 local profCdTrackerFrame = CreateFrame("Frame")
@@ -137,7 +137,9 @@ function UpdateTo0104()
     RemoveCdInDb("Alchemy", "Transmute: Primal Mana to fIRE")
     RemoveCdInDb("Alchemy", "Transmute: Primal Water to Shadow")
     RemoveCdInDb("Tailoring", "Mooncloth")
-    PcdDb["settings"]["version"] = "1.04"
+    if PcdDb and PcdDb["settings"] and not PcdDb["settings"]["version"] == "1.04" then
+        PcdDb["settings"]["version"] = "1.04"
+    end
 end
 
 function RemoveCdInDb(prof, name)
@@ -365,11 +367,11 @@ function UpdateCharacterProfessionDb()
         if (not isHeader and section == 2) then
             primaryCount = primaryCount + 1;
             if (primaryCount < 3 and skillName) then
-                local profData = {
+                local pcdSkillData = {
                     profName = skillName
                 }
-                profData.skillLevel = skillRank
-                table.insert(profs, profData)
+                pcdSkillData.skillLevel = skillRank
+                table.insert(profs, pcdSkillData)
             end
         end
     end
@@ -495,12 +497,12 @@ function GetAllNamesAndCdsOnAccount()
     if (not allOnAccount) then
         return
     end
-    for charName, professions in pairs(PcdDb) do
+    for charName, pcdProfessions in pairs(PcdDb) do
         if not (charName == "settings") then
-            for profTag, profs in pairs(professions) do 
-                for profName, profData in pairs(profs) do
-                    if profData["cooldowns"] then
-                        for spellName, doneAt in pairs(profData["cooldowns"]) do
+            for profTag, pcdProfs in pairs(pcdProfessions) do 
+                for profName, pcdProfData in pairs(pcdProfs) do
+                    if pcdProfData["cooldowns"] ~= nil then
+                        for spellName, doneAt in pairs(pcdProfData["cooldowns"]) do
                             table.insert(charSpellAndCd, {charName, spellName, doneAt} )
                         end
                     end

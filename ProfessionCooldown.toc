@@ -1,6 +1,6 @@
 ## Interface: 20501
 ## Title: Profession Cooldown Tracker
-## Version: 1.0.5
+## Version: 1.0.6
 ## Notes: Tool to track profession cooldowns across characters on your account.
 ## Author: Shapeshift
 ## DefaultState: enabled
