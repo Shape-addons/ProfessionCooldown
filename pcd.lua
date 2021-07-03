@@ -1,7 +1,21 @@
 -- PCD start
-local pcdVersion = "1.06"
+local pcdVersion = "1.07"
 pcdUpdateFromSpellId = nil
 local pcdIsLoaded = nil
+
+
+pcdSettings = {}
+pcdDefaults = {}
+pcdDefaults.spacing = 14
+pcdDefaults.entrySize = 11
+pcdDefaults.titleSize = 20
+
+function LoadPcdSettings()
+    pcdSettings.spacing = pcdDefaults.spacing
+    pcdSettings.entrySize = pcdDefaults.entrySize
+    pcdSettings.titleSize = pcdDefaults.titleSize
+end
+
 local profCdTrackerFrame = CreateFrame("Frame")
 profCdTrackerFrame:RegisterEvent("TRADE_SKILL_SHOW")
 profCdTrackerFrame:RegisterEvent("TRADE_SKILL_UPDATE")
@@ -9,33 +23,44 @@ profCdTrackerFrame:RegisterEvent("TRADE_SKILL_CLOSE")
 profCdTrackerFrame:RegisterEvent("ADDON_LOADED")
 profCdTrackerFrame:SetScript("OnEvent", function(self, event, arg1, ...)
     if (event == "TRADE_SKILL_SHOW" or event == "TRADE_SKILL_UPDATE" or event == "TRADE_SKILL_CLOSE") then
-        GetProfessionCooldowns()
-        if pcdFrame and pcdFrame:IsShown() then
-            pcdFrame:Hide()
-            CreatePCDFrame()
-        end
+        UpdateAndRepaintIfOpen()
     elseif not pcdIsLoaded and ((event == "ADDON_LOADED" and arg1 == "ProfessionCooldown") or event == "PLAYER_LOGIN") then
         pcdIsLoaded = true
-        if PcdDb and PcdDb["settings"] then
+        InitDbTable()
+        LoadPcdSettings()
+        if PcdDb and PcdDb["settings"] and not PcdDb["settings"]["UpdateFromSpellId"] == "n" then
             pcdUpdateFromSpellId = PcdDb["settings"]["UpdateFromSpellId"]
         end
+        -- CreatePcdOptionsFrame()
     end
 end)
+
+function UpdateAndRepaintIfOpen()
+    UpdateCds()
+    RepaintIfOpen()
+end
+
+function RepaintIfOpen()
+    if pcdFrame and pcdFrame:IsShown() then
+        pcdFrame:Hide()
+        CreatePCDFrame()
+    end
+end
+
+function UpdateCds()
+    if not pcdUpdateFromSpellId then
+        GetProfessionCooldowns()
+    else
+        GetCooldownsFromSpellIds()
+    end
+end
 
 local lootMsgFrame = CreateFrame("Frame")
 lootMsgFrame:RegisterEvent("CHAT_MSG_LOOT")
 lootMsgFrame:SetScript("OnEvent", function(self, event, arg1, arg2)
     if event == "CHAT_MSG_LOOT" then
         if (arg1:find("^You create:") ~= nil) then
-            if pcdFrame and pcdFrame:IsShown() then
-                pcdFrame:Hide()
-                if not pcdUpdateFromSpellId then
-                    GetProfessionCooldowns()
-                else 
-                    GetCooldownsFromSpellIds()
-                end
-                CreatePCDFrame()
-            end
+            UpdateAndRepaintIfOpen()
         end
     end
 end)
@@ -48,7 +73,6 @@ function getProfessionName(abilityName)
     elseif string.find(abilityName, "Brilliant Glass") then
         return "Jewelcrafting"
     end
-    -- todo: would it make sense to add JC stuff here? there is the brilliant glass thing..
     return nil
 end
 
@@ -92,7 +116,7 @@ function internalGetProfessionCooldowns()
             if (skillName) then
                 local professionGuess = getProfessionName(skillName)
                 if not professionGuess then
-                    logIfLevel (3, "ERROR: UNKNOWN PROFESSION!! Skill name was: " .. skillName)
+                    logIfLevel (3, "PCD Error: Uknown profession skill found, with name: " .. skillName)
                     return
                 end
                 logIfLevel (1, "prof guess : " .. professionGuess)
@@ -130,6 +154,7 @@ function UpdateTo0103()
             end 
         end
         PcdDb["settings"]["version"] = "1.03"
+        logIfLevel(2, "Updated PCD data to version 1.03")
     end
 end
 
@@ -137,8 +162,23 @@ function UpdateTo0104()
     RemoveCdInDb("Alchemy", "Transmute: Primal Mana to fIRE")
     RemoveCdInDb("Alchemy", "Transmute: Primal Water to Shadow")
     RemoveCdInDb("Tailoring", "Mooncloth")
-    if PcdDb and PcdDb["settings"] and not PcdDb["settings"]["version"] == "1.04" then
+    if PcdDb and PcdDb["settings"] and PcdDb["settings"]["version"] == "1.03" then
         PcdDb["settings"]["version"] = "1.04"
+        logIfLevel(2, "Updated PCD data to version 1.04")
+    end
+end
+
+function UpdateTo0107()
+    if PcdDb then
+        if PcdDb and PcdDb["settings"] and PcdDb["settings"]["version"] == "1.04" then
+            for charName, profs in pairs(PcdDb) do
+                if PcdDb[charName]["professions"] and PcdDb[charName]["professions"]["Jewelcrafting"] then
+                    PcdDb[charName]["professions"]["Jewelcrafting"]["cooldowns"] = {}
+                end
+            end
+            PcdDb["settings"]["version"] = "1.07"
+        logIfLevel(2, "Updated PCD data to version 1.07")
+        end
     end
 end
 
@@ -214,53 +254,43 @@ local spellclothId = 31373
 local shadowclothId = 36686
 local brilliantGlassId = 47280
 
--- function GetCooldownLeftOnSpell(spellId)
---     local start, duration, enabled, x = GetSpellCooldown(spellId) -- only primal might has to be checked.
---     -- local getTimeValue = GetTime()
---     -- local getServerTimeValue = GetServerTime()
---     -- local offset = GetServerTime() - GetTime()
---     -- print ("start is " .. start + offset)
---     -- print ("duration is " .. duration)
---     -- return GetCooldownLeftOnItem(start + offset, duration)
---     -- print ("start is: " .. start)
---     -- print ("duration is: " .. duration)
---     -- local leftOnSpell = GetCooldownLeftOnItem(start, duration)
---     -- print ("left is: " .. leftOnSpell) -- is equal to seconds left.
---     -- local doneAt = leftOnSpell + GetServerTime()
-
---     -- return doneAt
--- end
-
 function GetCooldownsFromSpellIds()
     logIfLevel(2, "updating from spell id")
+    if not pcdUpdateFromSpellId then
+        logIfLevel (2, "update from spell id called, but is disabled.")
+    end
     InitDbTable()
     local charName = UnitName("Player")
     if PcdDb and PcdDb[charName] and PcdDb[charName]["professions"] then
-        logIfLevel(2, "in if")
         if PcdDb[charName]["professions"]["Alchemy"] then
             logIfLevel(1, "alchemy found")
-            if not PcdDb[charName]["professions"]["Alchemy"]["cooldowns"] then 
-                PcdDb[charName]["professions"]["Alchemy"]["cooldowns"] = {}
+            if PcdDb[charName]["professions"]["Alchemy"]["skill"] >= 225 then
+                SetCooldownForSpell("Transmute", "Alchemy", primalMightId)
             end
-            PcdDb[charName]["professions"]["Alchemy"]["cooldowns"]["Transmute"] = GetCooldownTimestamp(primalMightId)
         end
         if PcdDb[charName]["professions"]["Tailoring"] then
             logIfLevel(1, "Tailoring found")
-            if not PcdDb[charName]["professions"]["Tailoring"]["cooldowns"] then 
-                PcdDb[charName]["professions"]["Tailoring"]["cooldowns"] = {}
+            if PcdDb[charName]["professions"]["Tailoring"]["skill"] >= 350 then
+                SetCooldownForSpell("Primal Mooncloth", "Tailoring", primalMoonclothId)
+                SetCooldownForSpell("Spellcloth", "Tailoring", spellclothId)
+                SetCooldownForSpell("Shadowcloth", "Tailoring", shadowclothId)
             end
-            PcdDb[charName]["professions"]["Tailoring"]["cooldowns"]["Primal Mooncloth"] = GetCooldownTimestamp(primalMoonclothId)
-            PcdDb[charName]["professions"]["Tailoring"]["cooldowns"]["Spellcloth"] = GetCooldownTimestamp(spellclothId)
-            PcdDb[charName]["professions"]["Tailoring"]["cooldowns"]["Shadowcloth"] = GetCooldownTimestamp(shadowclothId)
         end
         if PcdDb[charName]["professions"]["Jewelcrafting"] then
             logIfLevel(1, "Jewelcrafting found")
-            if not PcdDb[charName]["professions"]["Jewelcrafting"]["cooldowns"] then
-                PcdDb[charName]["professions"]["Jewelcrafting"]["cooldowns"] = {}
+            if PcdDb[charName]["professions"]["Jewelcrafting"]["skill"] >= 350 then
+                SetCooldownForSpell("Brilliant Glass", "Jewelcrafting", brilliantGlassId)
             end
-            PcdDb[charName]["professions"]["Jewelcrafting"]["cooldowns"] = GetCooldownTimestamp(brilliantGlassId)
         end
     end
+end
+
+function SetCooldownForSpell(cdName, professionName, spellId)
+    local charName = UnitName("Player")
+    if not PcdDb[charName]["professions"][professionName]["cooldowns"] or not type(PcdDb[charName]["professions"][professionName]["cooldowns"]) == "table" then
+        PcdDb[charName]["professions"][professionName]["cooldowns"] = {}
+    end
+    PcdDb[charName]["professions"][professionName]["cooldowns"][cdName] = GetCooldownTimestamp(spellId)
 end
 
 function GetCooldownTimestamp(spellId)
@@ -445,9 +475,9 @@ end
 function SetFrameTitle(theFrame, titleText)
     local title = theFrame:CreateFontString(nil, "OVERLAY")
     title:SetFontObject("GameFontHighlight")
-    title:SetPoint("CENTER", theFrame, "TOP", 0 ,-20)
+    title:SetPoint("CENTER", theFrame, "TOP", 0 ,-pcdSettings.titleSize)
     title:SetText(titleText)
-    title:SetFont("Fonts\\FRIZQT__.ttf", 20, "OUTLINE")
+    title:SetFont("Fonts\\FRIZQT__.ttf", pcdSettings.titleSize, "OUTLINE")
     theFrame.title = title
 end
 
@@ -456,7 +486,7 @@ function AddTextToFrame(theFrame, text, firstPosition, secondPosition)
     font:SetFontObject("GameFontHighlight")
     font:SetPoint(firstPosition, theFrame, secondPosition)
     font:SetText(text)
-    font:SetFont("Fonts\\FRIZQT__.ttf", 11, "OUTLINE")
+    font:SetFont("Fonts\\FRIZQT__.ttf", pcdSettings.entrySize, "OUTLINE")
     logIfLevel (1, "added test frame stuff")
     return font
 end
@@ -477,16 +507,18 @@ function AddTextWithCDToFrame(theFrame, leftText, rightText, position, cdColor)
     nameFont = theFrame.fontStrings[leftText]["L"]
     cdFont = theFrame.fontStrings[leftText]["R"]
 
-    local actualPosition = -6 -14 * (position + 1)
+
+    local topSpacing = -6
+    local actualPosition = topSpacing - pcdSettings.spacing * (position + 1)
     nameFont:SetFontObject("GameFontHighlight")
     nameFont:SetPoint("TOPLEFT", 10, actualPosition)
     nameFont:SetText(leftText)
-    nameFont:SetFont("Fonts\\FRIZQT__.ttf", 11, "OUTLINE")
+    nameFont:SetFont("Fonts\\FRIZQT__.ttf", pcdSettings.entrySize, "OUTLINE")
 
     cdFont:SetFontObject("GameFontHighlight")
     cdFont:SetText(rightText)
     cdFont:SetPoint("TOPRIGHT", -10, actualPosition)
-    cdFont:SetFont("Fonts\\FRIZQT__.ttf", 11, "OUTLINE")
+    cdFont:SetFont("Fonts\\FRIZQT__.ttf", pcdSettings.entrySize, "OUTLINE")
     cdFont:SetTextColor(cdColor[1], cdColor[2], cdColor[3], cdColor[4])
 end
 
@@ -501,10 +533,12 @@ function GetAllNamesAndCdsOnAccount()
         if not (charName == "settings") then
             for profTag, pcdProfs in pairs(pcdProfessions) do 
                 for profName, pcdProfData in pairs(pcdProfs) do
-                    if pcdProfData["cooldowns"] ~= nil then
+                    if pcdProfData["cooldowns"] ~= nil and type(pcdProfData["cooldowns"]) == "table" then
                         for spellName, doneAt in pairs(pcdProfData["cooldowns"]) do
                             table.insert(charSpellAndCd, {charName, spellName, doneAt} )
                         end
+                    else
+                        logIfLevel(1, "Cooldown data not found for character " .. charName)
                     end
                 end
             end
@@ -527,10 +561,10 @@ function CreatePcdOptionsFrame()
             EnableCloseOnEscape(false)
         end
         if PcdDb["settings"]["UpdateFromSpellId"] == "y" then
-            EnableUpdateFromSpellId(true)
+            EnableUpdateFromSpellId(false)
         end
-
     end
+
     if not (pcdOptionsFrame.CloseOnEscape) then
         pcdOptionsFrame.CloseOnEscape = CreateFrame("CheckButton", "CloseOnEscape_CheckButton", pcdOptionsFrame, "ChatConfigCheckButtonTemplate")
     end
@@ -586,11 +620,9 @@ function CreatePcdOptionsFrame()
             local isChecked = pcdOptionsFrame.UpdateFromSpellId:GetChecked()
             if (isChecked) then
                 pcdOptionsFrame.UpdateFromSpellId:SetChecked(true)
-                PcdDb["settings"]["UpdateFromSpellId"] = "y"
                 EnableUpdateFromSpellId(true)
             else
                 pcdOptionsFrame.UpdateFromSpellId:SetChecked(nil)
-                PcdDb["settings"]["UpdateFromSpellId"] = "n"
                 DisableUpdateFromSpellId(true)
             end
         end)
@@ -684,23 +716,27 @@ function EnableUpdateFromSpellId(shouldPrint)
     if PcdDb["settings"] then
         PcdDb["settings"]["UpdateFromSpellId"] = "y"
     end
-    print ('Enabled cooldown updates from spell id (BETA), updated on every craft. Can be manually called by using the "/pcd update" command.')
+    if shouldPrint then
+        print ('Enabled cooldown updates from spell id (BETA), updated on every craft. Can be manually called by using the "/pcd update" command.')
+    end
 end
 
 function DisableUpdateFromSpellId(shouldPrint)
-    -- pcdUpdateFromSpellId = nil
+    pcdUpdateFromSpellId = nil
     if PcdDb["settings"] then
         PcdDb["settings"]["UpdateFromSpellId"] = "n"
     end
-    print ('Disabled cooldown updates from spell id (BETA). Can still be manually called by using "/pcd update" from macro or chat command.')
+    if shouldPrint then
+        print ('Disabled cooldown updates from spell id (BETA). Can still be manually called by using "/pcd update" from macro or chat command.')
+    end
 end
 
 function DisableCloseOnEscape(shouldPrint)
     if PcdDb and PcdDb["settings"] then
         PcdDb["settings"]["CloseOnEscape"] = "n"
-        if (shouldPrint) then
-            print ("Disabled 'Close On Escape' for PCD. Reload UI (/reload) for this to take effect.")
-        end
+    end
+    if shouldPrint then
+        print ("Disabled 'Close On Escape' for PCD. Reload UI (/reload) for this to take effect.")
     end
 end
 
@@ -720,6 +756,15 @@ end
 
 function StartsWith(msg, pattern)
     return msg:find("^" .. pattern) ~= nil
+end
+
+function GetTextBefore(msg, str)
+    if msg and str and string.len(msg) >= string.len(str) then
+        local index = string.find(msg, str)
+        if index and index > 0 then
+            return string.sub(msg, 0, index - 1)
+        end
+    end
 end
 
 function GetTextAfter(msg, str)
@@ -762,15 +807,13 @@ function UpdateVersionInDb(versionNumber)
     PcdDb["settings"]["version"] = versionNumber
 end
 
-
-function UpdatePcdDb()
+function UpdateDataFormatVersion()
     if ShouldPcdUpdate() then
         UpdateTo0103()
         UpdateTo0104()
+        UpdateTo0107()
     end
 end
-
-
 
 SLASH_PCD1 = "/pcd"
 SlashCmdList["PCD"] = function(msg)
@@ -780,15 +823,11 @@ SlashCmdList["PCD"] = function(msg)
             CreatePCDFrame()
         end
     elseif msg == nil or msg == "" then
-        UpdatePcdDb()
+        UpdateDataFormatVersion()
         if pcdFrame and pcdFrame:IsShown() then
             pcdFrame:Hide()
         else
-            if not pcdUpdateFromSpellId then
-                GetProfessionCooldowns()
-            else 
-                GetCooldownsFromSpellIds()
-            end
+            UpdateCds()
             CreatePCDFrame()
         end
     elseif msg == "options" then
