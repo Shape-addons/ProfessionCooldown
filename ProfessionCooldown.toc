@@ -5,4 +5,5 @@
 ## Author: Shapeshift
 ## DefaultState: enabled
 ## SavedVariables: PcdDb
+embeds.xml
 pcd.lua

@@ -3,6 +3,7 @@ local pcdVersion = "1.07"
 pcdUpdateFromSpellId = nil
 local pcdIsLoaded = nil
 
+local LDB = LibStub:GetLibrary("LibDataBroker-1.1");
 
 pcdSettings = {}
 pcdDefaults = {}
@@ -31,6 +32,7 @@ profCdTrackerFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         if PcdDb and PcdDb["settings"] and not PcdDb["settings"]["UpdateFromSpellId"] == "n" then
             pcdUpdateFromSpellId = PcdDb["settings"]["UpdateFromSpellId"]
         end
+        CreateBroker()
         -- CreatePcdOptionsFrame()
     end
 end)
@@ -674,26 +676,8 @@ function CreatePCDFrame()
     for i = 1, #sortedProfData do
         if sortedProfData[i] then
             local line = sortedProfData[i]
-            local cdText = ""
-            local secondsLeft = line[3] - GetServerTime()
-            logIfLevel (1, "secs left: " .. secondsLeft)
-            local hoursLeft = secondsLeft / 3600
-            local cdColor
-            if line[3] and hoursLeft <= 0 then
-                cdText = "Ready"
-                cdColor = { 0, 233 / 255, 0, 1}
-            else
-                if (hoursLeft > 24) then
-                    cdColor = { 233 / 255, 0, 0, 1}
-                    cdText = cdText .. math.floor(hoursLeft / 24) .. " d "
-                else
-                    cdColor = { 1, 1, 10 / 255, 1}
-                end
-
-                cdText = cdText .. math.floor(hoursLeft % 24) .. " h "
-                cdText = cdText .. math.floor((hoursLeft % 1) * 60) .. " m"
-            end
-            AddTextWithCDToFrame(pcdFrame, line[1] .. " - " .. line[2], "" .. cdText, i, cdColor)
+            local cooldownText = GetCooldownText(line[3])
+            AddTextWithCDToFrame(pcdFrame, line[1] .. " - " .. line[2], "" .. cooldownText.text, i, cooldownText.color)
         end
     end
     pcdFrame:Show()
@@ -813,6 +797,114 @@ function UpdateDataFormatVersion()
         UpdateTo0104()
         UpdateTo0107()
     end
+end
+
+local PCDLDB, doUpdateMinimapButton;
+function CreateBroker()
+    local data = {
+		type = "launcher",
+		label = "PCD",
+		text = "Profession Cooldowns",
+		icon = "Interface\\Icons\\inv_misc_pocketwatch_01",
+		OnClick = function(self, button)
+			if (button == "LeftButton" and IsShiftKeyDown()) then
+				GetCooldownsFromSpellIds()
+                if pcdFrame and pcdFrame:IsShown() then
+                    CreatePCDFrame()
+                end
+			elseif (button == "LeftButton") then
+				UpdateDataFormatVersion()
+                if pcdFrame and pcdFrame:IsShown() then
+                    pcdFrame:Hide()
+                else
+                    UpdateCds()
+                    CreatePCDFrame()
+                end
+			elseif (button == "RightButton" and IsShiftKeyDown()) then
+				FreshInit()
+			elseif (button == "RightButton") then
+				InitDbTable()
+                CreatePcdOptionsFrame()
+			end
+		end,
+		OnLeave = function(self, button)
+			doUpdateMinimapButton = nil;
+		end,
+		OnTooltipShow = function(tooltip)
+			doUpdateMinimapButton = true;
+			updateMinimapButton(tooltip);
+		end,
+		OnEnter = function(self, button)
+			GameTooltip:SetOwner(self, "ANCHOR_NONE")
+			GameTooltip:SetPoint("TOPLEFT", self, "BOTTOMLEFT")
+			doUpdateMinimapButton = true;
+			UpdateMinimapButton(GameTooltip, true);
+			GameTooltip:Show()
+		end,
+	};
+	PCDLDB = LDB:NewDataObject("PCD", data);
+end
+
+function UpdateMinimapButton(tooltip, usingPanel)
+	local _, relativeTo = tooltip:GetPoint();
+	if (doUpdateMinimapButton and (usingPanel or relativeTo and relativeTo:GetName() == "LibDBIcon10_ProfessionCDTracker")) then
+		tooltip:ClearLines()
+		tooltip:AddLine("Profession CD Tracker");
+        tooltip:AddLine(" ");
+        AddCooldownsToTooltip(tooltip)
+        tooltip:AddLine(" ");
+		tooltip:AddLine("|cFF9CD6DELeft-Click|r Show Cooldowns");
+		tooltip:AddLine("|cFF9CD6DERight-Click|r Show Options");
+		tooltip:AddLine("|cFF9CD6DEShift Left-Click|r Trigger Manual Update");
+		tooltip:AddLine("|cFF9CD6DEShift Right-Click|r Reset All Data");
+		C_Timer.After(0.1, function()
+			UpdateMinimapButton(tooltip, usingPanel);
+		end)
+	end
+end
+
+function AddCooldownsToTooltip(tooltip)
+    local charSpellAndCd = GetAllNamesAndCdsOnAccount()
+    local sortedProfData = {}
+    for i = 1, #charSpellAndCd do
+        sortedProfData[i] = charSpellAndCd[i]
+    end
+    table.sort(sortedProfData, function (lhs, rhs) return lhs[3] < rhs[3] end)
+    for i = 1, #sortedProfData do
+        if sortedProfData[i] then
+            local line = sortedProfData[i]
+
+            local cooldownText = GetCooldownText(line[3])
+            tooltip:AddDoubleLine(line[1].." - " .. line[2], "" .. cooldownText.text, 1, 1, 1, cooldownText.color[1], cooldownText.color[2], cooldownText.color[3])
+        end
+    end
+end
+
+function GetCooldownText(cooldown)
+    local cooldownText = {}
+    local cdText = ""
+    local secondsLeft = cooldown - GetServerTime()
+    logIfLevel (1, "secs left: " .. secondsLeft)
+    local hoursLeft = secondsLeft / 3600
+    local cdColor
+    if cooldown and hoursLeft <= 0 then
+        cdText = "Ready"
+        cdColor = { 0, 233 / 255, 0, 1}
+    else
+        if (hoursLeft > 24) then
+            cdColor = { 233 / 255, 0, 0, 1}
+            cdText = cdText .. math.floor(hoursLeft / 24) .. " d "
+        else
+            cdColor = { 1, 1, 10 / 255, 1}
+        end
+
+        cdText = cdText .. math.floor(hoursLeft % 24) .. " h "
+        cdText = cdText .. math.floor((hoursLeft % 1) * 60) .. " m"
+    end
+
+    cooldownText["text"] = cdText
+    cooldownText["color"] = cdColor
+    return cooldownText
 end
 
 SLASH_PCD1 = "/pcd"
