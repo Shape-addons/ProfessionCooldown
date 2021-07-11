@@ -1,9 +1,11 @@
 -- PCD start
-local pcdVersion = "1.07"
+local pcdVersion = "1.08"
 pcdUpdateFromSpellId = nil
+pcdShowMinimapButton = nil
 local pcdIsLoaded = nil
 
 local LDB = LibStub:GetLibrary("LibDataBroker-1.1");
+local PCDLDBIcon = LibStub:GetLibrary("LibDBIcon-1.0")
 
 pcdSettings = {}
 pcdDefaults = {}
@@ -29,11 +31,15 @@ profCdTrackerFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         pcdIsLoaded = true
         InitDbTable()
         LoadPcdSettings()
-        if PcdDb and PcdDb["settings"] and not PcdDb["settings"]["UpdateFromSpellId"] == "n" then
-            pcdUpdateFromSpellId = PcdDb["settings"]["UpdateFromSpellId"]
+        if PcdDb and PcdDb["settings"] and not (PcdDb["settings"]["UpdateFromSpellId"] == "n") then
+            pcdUpdateFromSpellId = true
+            logIfLevel(2, "update from spell id set to true")
+        end
+        if PcdDb and PcdDb["settings"] and not (PcdDb["settings"]["ShowMinimapButton"] == "n") then
+            pcdShowMinimapButton = true
+            logIfLevel(2, "update from spell id set to true")
         end
         CreateBroker()
-        -- CreatePcdOptionsFrame()
     end
 end)
 
@@ -50,6 +56,7 @@ function RepaintIfOpen()
 end
 
 function UpdateCds()
+    logIfLevel(2, "Called update cds")
     if not pcdUpdateFromSpellId then
         GetProfessionCooldowns()
     else
@@ -63,6 +70,8 @@ lootMsgFrame:SetScript("OnEvent", function(self, event, arg1, arg2)
     if event == "CHAT_MSG_LOOT" then
         if (arg1:find("^You create:") ~= nil) then
             UpdateAndRepaintIfOpen()
+            logIfLevel(2, "Creation message event fired. Calling update at: ")
+            logIfLevel(1, GetTime())
         end
     end
 end)
@@ -77,6 +86,13 @@ function getProfessionName(abilityName)
     end
     return nil
 end
+
+local profNamesToConsider = { 
+    ["Alchemy"] = true,
+    ["Tailoring"] = true,
+    ["Leatherworking"] = true,
+    ["Jewelcrafting"] = true
+}
 
 function initProfessionIfNeeded(profName)
     local charName = UnitName("player")
@@ -187,7 +203,7 @@ end
 function RemoveCdInDb(prof, name)
     if PcdDb then
         for charName, profs in pairs(PcdDb) do
-            if PcdDb[charName]["professions"] and PcdDb[charName]["professions"][prof] and PcdDb[charName]["professions"][prof]["cooldowns"] then
+            if profs and type(profs) == "table" and profs[prof] and profs[prof]["cooldowns"] and profs[prof]["cooldowns"][name] then
                 PcdDb[charName]["professions"][prof]["cooldowns"][name] = nil
             end
         end
@@ -258,6 +274,7 @@ local brilliantGlassId = 47280
 
 function GetCooldownsFromSpellIds()
     logIfLevel(2, "updating from spell id")
+    logIfLevel(1, GetTime())
     if not pcdUpdateFromSpellId then
         logIfLevel (2, "update from spell id called, but is disabled.")
     end
@@ -293,6 +310,7 @@ function SetCooldownForSpell(cdName, professionName, spellId)
         PcdDb[charName]["professions"][professionName]["cooldowns"] = {}
     end
     PcdDb[charName]["professions"][professionName]["cooldowns"][cdName] = GetCooldownTimestamp(spellId)
+    logIfLevel(1, "set cooldown timestamp of " .. cdName .. " to " .. PcdDb[charName]["professions"][professionName]["cooldowns"][cdName])
 end
 
 function GetCooldownTimestamp(spellId)
@@ -302,22 +320,6 @@ function GetCooldownTimestamp(spellId)
 
     return doneAt
 end
-
--- local tbcTransmuteIds = {
---     29688, -- primal might
---     32765, -- earthstorm diamond
---     32766, -- skyfire diamond
---     28566, -- primal air to fire
---     28567, -- primal earth to water
---     28582, -- primal mana to fire
---     28583, -- primal fire to mana
---     28584, -- primal life to earth
---     28585, -- primal earth to life
---     28569, -- primal water to air
---     28581, -- primal water to shadow
---     28580, -- primal shadow to water
---     28568, -- primal fire to earth
--- }
 
 local classicTransmuteSkillNames = {
     ["Transmute: Arcanite"] = true,
@@ -386,7 +388,6 @@ end
 function UpdateCharacterProfessionDb()
     local charName = UnitName("player")
     local profs = {}
-
     local primaryCount = 0
     local i = 1
     local j = 0
@@ -397,8 +398,10 @@ function UpdateCharacterProfessionDb()
             section = 2;
         end
         if (not isHeader and section == 2) then
-            primaryCount = primaryCount + 1;
-            if (primaryCount < 3 and skillName) then
+            logIfLevel (2, "found " .. skillName .. " with primary count " .. primaryCount)
+            if (primaryCount < 3 and skillName) and profNamesToConsider[skillName] ~= nil and #profs <= 2 then
+                logIfLevel(2, "added " .. skillName .. " to PCD database.")
+                primaryCount = primaryCount + 1;
                 local pcdSkillData = {
                     profName = skillName
                 }
@@ -411,7 +414,7 @@ function UpdateCharacterProfessionDb()
         if (profs[j]) then
             PcdDb[charName]["professions"][profs[j].profName] = {}
             PcdDb[charName]["professions"][profs[j].profName]["skill"] = profs[j].skillLevel
-            logIfLevel (2, "Updated prof for charName: " .. profs[j].profName .. ", " .. profs[j].skillLevel)
+            logIfLevel (2, "Updated prof for  " .. charName .. ": " .. profs[j].profName .. ", " .. profs[j].skillLevel)
         end
     end
 end
@@ -444,6 +447,15 @@ function InitDbTable()
     if (not next(PcdDb[charName]["professions"])) then
         UpdateCharacterProfessionDb()
         logIfLevel(1, "Updated character prof db")
+    else
+        for p in pairs(PcdDb[charName]["professions"]) do
+            if (not p["skill"]) or (not type(p["skill"]) == "number") then
+                UpdateCharacterProfessionDb()
+            end
+        end
+    end
+    if not PcdDb["settings"]["ShowMinimapButton"] then
+        PcdDb["settings"]["ShowMinimapButton"] = "y"
     end
 end
 
@@ -526,21 +538,22 @@ end
 
 function GetAllNamesAndCdsOnAccount()
     local charSpellAndCd = {}
-    local profNamesToConsider = { "Alchemy", "Tailoring", "Leatherworking", "Blacksmithing", "Jewelcrafting" }
     local allOnAccount = PcdDb
     if (not allOnAccount) then
         return
     end
     for charName, pcdProfessions in pairs(PcdDb) do
         if not (charName == "settings") then
-            for profTag, pcdProfs in pairs(pcdProfessions) do 
-                for profName, pcdProfData in pairs(pcdProfs) do
-                    if pcdProfData["cooldowns"] ~= nil and type(pcdProfData["cooldowns"]) == "table" then
-                        for spellName, doneAt in pairs(pcdProfData["cooldowns"]) do
-                            table.insert(charSpellAndCd, {charName, spellName, doneAt} )
+            if pcdProfessions ~= nil and type(pcdProfessions) == "table" then
+                for profTag, pcdProfs in pairs(pcdProfessions) do 
+                    for profName, pcdProfData in pairs(pcdProfs) do
+                        if pcdProfData["cooldowns"] ~= nil and type(pcdProfData["cooldowns"]) == "table" then
+                            for spellName, doneAt in pairs(pcdProfData["cooldowns"]) do
+                                table.insert(charSpellAndCd, {charName, spellName, doneAt} )
+                            end
+                        else
+                            logIfLevel(1, "Cooldown data not found for character " .. charName)
                         end
-                    else
-                        logIfLevel(1, "Cooldown data not found for character " .. charName)
                     end
                 end
             end
@@ -550,6 +563,7 @@ function GetAllNamesAndCdsOnAccount()
 end
 
 pcdOptionsFrame = CreateFrame("Frame", "PcdOptionsFrame", UIParent)
+pcdOptionsFrame:Hide()
 function CreatePcdOptionsFrame()
     if not pcdOptionsFrame.close then 
         pcdOptionsFrame.close = CreateFrame("Button", "$parentClose", pcdOptionsFrame, "UIPanelCloseButton")
@@ -565,6 +579,9 @@ function CreatePcdOptionsFrame()
         if PcdDb["settings"]["UpdateFromSpellId"] == "y" then
             EnableUpdateFromSpellId(false)
         end
+        if PcdDb["settings"]["ShowMinimapButton"] == "y" then
+            EnableMinimapButton(false)
+        end
     end
 
     if not (pcdOptionsFrame.CloseOnEscape) then
@@ -579,6 +596,12 @@ function CreatePcdOptionsFrame()
     if not (pcdOptionsFrame.UpdateFromSpellIdText) then
         pcdOptionsFrame.UpdateFromSpellIdText = pcdOptionsFrame:CreateFontString(nil, "OVERLAY")
     end
+    if not (pcdOptionsFrame.ShowMinimapButton) then
+        pcdOptionsFrame.ShowMinimapButton = CreateFrame("CheckButton", "UpdateMiniMap_CheckButton", pcdOptionsFrame, "ChatConfigCheckButtonTemplate")
+    end
+    if not (pcdOptionsFrame.ShowMinimapButtonText) then
+        pcdOptionsFrame.ShowMinimapButtonText = pcdOptionsFrame:CreateFontString(nil, "OVERLAY")
+    end
 
     pcdOptionsFrame.CloseOnEscapeText:SetFontObject("GameFontHighlight")
     pcdOptionsFrame.CloseOnEscapeText:SetPoint("TOPLEFT", 40, -40)
@@ -589,6 +612,11 @@ function CreatePcdOptionsFrame()
     pcdOptionsFrame.UpdateFromSpellIdText:SetPoint("TOPLEFT", 40, -60)
     pcdOptionsFrame.UpdateFromSpellIdText:SetText("Update from spell id")
     pcdOptionsFrame.UpdateFromSpellIdText:SetFont("Fonts\\FRIZQT__.ttf", 11, "OUTLINE")
+
+    pcdOptionsFrame.ShowMinimapButtonText:SetFontObject("GameFontHighlight")
+    pcdOptionsFrame.ShowMinimapButtonText:SetPoint("TOPLEFT", 40, -80)
+    pcdOptionsFrame.ShowMinimapButtonText:SetText("Show mini map button")
+    pcdOptionsFrame.ShowMinimapButtonText:SetFont("Fonts\\FRIZQT__.ttf", 11, "OUTLINE")
     
     if PcdDb["settings"]["CloseOnEscape"] == "y" then
         pcdOptionsFrame.CloseOnEscape:SetChecked(PcdDb["settings"]["CloseOnEscape"])
@@ -601,6 +629,14 @@ function CreatePcdOptionsFrame()
     else
         pcdOptionsFrame.UpdateFromSpellId:SetChecked(nil)
     end
+
+    if PcdDb["settings"]["ShowMinimapButton"] == "y" then
+        pcdOptionsFrame.ShowMinimapButton:SetChecked(PcdDb["settings"]["ShowMinimapButton"])
+    else
+        pcdOptionsFrame.ShowMinimapButton:SetChecked(nil)
+    end
+
+
     pcdOptionsFrame.CloseOnEscape:SetPoint("TOPLEFT", 350, -34)
     pcdOptionsFrame.CloseOnEscape:SetScript("OnClick", 
         function()
@@ -628,9 +664,23 @@ function CreatePcdOptionsFrame()
                 DisableUpdateFromSpellId(true)
             end
         end)
+
+    pcdOptionsFrame.ShowMinimapButton:SetPoint("TOPLEFT", 350, -74)
+    pcdOptionsFrame.ShowMinimapButton:SetScript("OnClick",
+        function()
+            local isChecked = pcdOptionsFrame.ShowMinimapButton:GetChecked()
+            if (isChecked) then
+                pcdOptionsFrame.ShowMinimapButton:SetChecked(true)
+                EnableMinimapButton(true)
+            else
+                pcdOptionsFrame.ShowMinimapButton:SetChecked(nil)
+                DisableMinimapButton(true)
+            end
+        end)
     
     pcdOptionsFrame.CloseOnEscape:Show()
     pcdOptionsFrame.UpdateFromSpellId:Show()
+    pcdOptionsFrame.ShowMinimapButton:Show()
     pcdOptionsFrame.CloseOnEscape.tooltip = "If checked, Pcd frames will close when hitting the escape key"
     pcdOptionsFrame.UpdateFromSpellId.tooltip = "If checked, Pcd data will be updated from spell id on every profession craft."
     SetFrameTitle(pcdOptionsFrame, "PCD options")
@@ -721,6 +771,28 @@ function DisableCloseOnEscape(shouldPrint)
     end
     if shouldPrint then
         print ("Disabled 'Close On Escape' for PCD. Reload UI (/reload) for this to take effect.")
+    end
+end
+
+function EnableMinimapButton(shouldPrint)
+    if PcdDb and PcdDb["settings"] then
+        pcdShowMinimapButton = true
+        PcdDb["settings"]["ShowMinimapButton"] = "y"
+        PCDLDBIcon:Show("PCD")
+    end
+    if shouldPrint then
+        print ("Minimap button visibility enabled for PCD.")
+    end
+end
+
+function DisableMinimapButton(shouldPrint)
+    if PcdDb and PcdDb["settings"] then
+        pcdShowMinimapButton = nil
+        PcdDb["settings"]["ShowMinimapButton"] = "n"
+        PCDLDBIcon:Hide("PCD")
+    end
+    if shouldPrint then
+        print ("Minimap button visibility disabled for PCD.")
     end
 end
 
@@ -824,15 +896,19 @@ function CreateBroker()
 				FreshInit()
 			elseif (button == "RightButton") then
 				InitDbTable()
-                CreatePcdOptionsFrame()
+                if pcdOptionsFrame and pcdOptionsFrame:IsShown() then
+                    pcdOptionsFrame:Hide()
+                else 
+                    CreatePcdOptionsFrame()
+                end
 			end
 		end,
 		OnLeave = function(self, button)
-			doUpdateMinimapButton = nil;
+			doUpdateMinimapButton = pcdSho;
 		end,
 		OnTooltipShow = function(tooltip)
 			doUpdateMinimapButton = true;
-			updateMinimapButton(tooltip);
+			UpdateMinimapButton(tooltip, doUpdateMinimapButton);
 		end,
 		OnEnter = function(self, button)
 			GameTooltip:SetOwner(self, "ANCHOR_NONE")
@@ -843,12 +919,18 @@ function CreateBroker()
 		end,
 	};
 	PCDLDB = LDB:NewDataObject("PCD", data);
+    if LDB and PCDLDBIcon and PCDLDB then
+        PCDLDBIcon:Register("PCD", data, PcdDb["settings"])
+        if not pcdShowMinimapButton then
+            PCDLDBIcon:Hide("PCD")
+        end
+    end
 end
 
 function UpdateMinimapButton(tooltip, usingPanel)
 	local _, relativeTo = tooltip:GetPoint();
-	if (doUpdateMinimapButton and (usingPanel or relativeTo and relativeTo:GetName() == "LibDBIcon10_ProfessionCDTracker")) then
-		tooltip:ClearLines()
+	if (doUpdateMinimapButton and (usingPanel or relativeTo and relativeTo:GetName() == "LibDBIcon10_PCD")) then
+        tooltip:ClearLines()
 		tooltip:AddLine("Profession CD Tracker");
         tooltip:AddLine(" ");
         AddCooldownsToTooltip(tooltip)
@@ -924,7 +1006,11 @@ SlashCmdList["PCD"] = function(msg)
         end
     elseif msg == "options" then
         InitDbTable()
-        CreatePcdOptionsFrame()
+        if pcdOptionsFrame and pcdOptionsFrame:IsShown() then
+            pcdOptionsFrame:Hide()
+        else
+            CreatePcdOptionsFrame()
+        end
     elseif msg == "reset" then
         ResetPosition()
     elseif msg == "resetalldata" then
