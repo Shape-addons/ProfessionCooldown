@@ -1,5 +1,5 @@
 -- PCD start
-local pcdVersion = "1.08"
+local pcdVersion = "1.09"
 pcdUpdateFromSpellId = nil
 pcdShowMinimapButton = nil
 local pcdIsLoaded = nil
@@ -37,7 +37,7 @@ profCdTrackerFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         end
         if PcdDb and PcdDb["settings"] and not (PcdDb["settings"]["ShowMinimapButton"] == "n") then
             pcdShowMinimapButton = true
-            logIfLevel(2, "update from spell id set to true")
+            logIfLevel(2, "show mini map button set to true")
         end
         CreateBroker()
     end
@@ -225,6 +225,10 @@ function RenameCdInDb(prof, prevName, updatedName)
     end
 end
 
+function ShouldShowCdForCharacter(charName, cdName)
+
+end
+
 function GetProfessionCooldowns()
     InitDbTable()
     internalGetProfessionCooldowns()
@@ -271,6 +275,34 @@ local primalMoonclothId = 26751
 local spellclothId = 31373
 local shadowclothId = 36686
 local brilliantGlassId = 47280
+local allTransmuteIds = {
+    17560, -- Fire to Earth
+    11479, -- Iron to Gold
+    11480, -- Mithril to Truesilver
+    17559, -- Air to Fire
+    17561, -- Earth to Water
+    17562, -- Water to Air
+    17563, -- Undeath to Water
+    17564, -- Water to Undeath
+    17565, -- Life to Earth
+    17566, -- Earth to Life
+    28566, -- Primal Air to Fire
+    28567, -- Primal Earth to Water
+    28568, -- Primal Fire to Earth
+    28569, -- Primal Water to Air
+    28581, -- Primal Water to Shadow
+    28582, -- Primal Mana to Fire
+    28583, -- Primal Fire to Mana
+    28584, -- Primal Life to Earth
+    28585, -- Primal Earth to Life
+    28580, -- Primal Shadow to Water
+    29688, -- Primal Might
+    32765, -- Earthstorm Diamond
+    32766, -- Skyfire Diamond
+-- Below has no cd.
+--    17187, -- Arcanite
+--    25146, -- Elemental Fire
+}
 
 function GetCooldownsFromSpellIds()
     logIfLevel(2, "updating from spell id")
@@ -284,7 +316,10 @@ function GetCooldownsFromSpellIds()
         if PcdDb[charName]["professions"]["Alchemy"] then
             logIfLevel(1, "alchemy found")
             if PcdDb[charName]["professions"]["Alchemy"]["skill"] >= 225 then
-                SetCooldownForSpell("Transmute", "Alchemy", primalMightId)
+                local highestTransmuteCd = GetTransmuteCd()
+                if highestTransmuteCd > 0 then
+                    SetCooldownForSpell("Transmute", "Alchemy", primalMightId)
+                end
             end
         end
         if PcdDb[charName]["professions"]["Tailoring"] then
@@ -302,6 +337,18 @@ function GetCooldownsFromSpellIds()
             end
         end
     end
+end
+
+function GetTransmuteCd()
+    local best = -1
+    for i = 1, #allTransmuteIds do
+        local timestamp = GetCooldownTimestamp(allTransmuteIds[i])
+        if timestamp > best then
+            best = timestamp
+        end
+    end
+
+    return best
 end
 
 function SetCooldownForSpell(cdName, professionName, spellId)
@@ -511,15 +558,15 @@ function AddTextWithCDToFrame(theFrame, leftText, rightText, position, cdColor)
     end
     local nameFont
     local cdFont
-    if not theFrame.fontStrings[leftText] then
+    if not theFrame.fontStrings[position] then
 
-        theFrame.fontStrings[leftText] = { 
+        theFrame.fontStrings[position] = { 
             ["L"] = theFrame:CreateFontString(nil, "Overlay"), 
             ["R"] = theFrame:CreateFontString(nil, "Overlay")
         }
     end
-    nameFont = theFrame.fontStrings[leftText]["L"]
-    cdFont = theFrame.fontStrings[leftText]["R"]
+    nameFont = theFrame.fontStrings[position]["L"]
+    cdFont = theFrame.fontStrings[position]["R"]
 
 
     local topSpacing = -6
@@ -534,6 +581,9 @@ function AddTextWithCDToFrame(theFrame, leftText, rightText, position, cdColor)
     cdFont:SetPoint("TOPRIGHT", -10, actualPosition)
     cdFont:SetFont("Fonts\\FRIZQT__.ttf", pcdSettings.entrySize, "OUTLINE")
     cdFont:SetTextColor(cdColor[1], cdColor[2], cdColor[3], cdColor[4])
+
+    nameFont:Show()
+    cdFont:Show()
 end
 
 function GetAllNamesAndCdsOnAccount()
@@ -723,6 +773,8 @@ function CreatePCDFrame()
         sortedProfData[i] = charSpellAndCd[i]
     end
     table.sort(sortedProfData, function (lhs, rhs) return lhs[3] < rhs[3] end)
+
+    ClearFontStrings(pcdFrame)
     for i = 1, #sortedProfData do
         if sortedProfData[i] then
             local line = sortedProfData[i]
@@ -732,6 +784,22 @@ function CreatePCDFrame()
     end
     pcdFrame:Show()
     logIfLevel (1, "PCD frame created")
+end
+
+-- /script ClearFontStrings(pcdFrame)
+function ClearFontStrings(f)
+    if f.fontStrings and type(f.fontStrings) == "table" then
+        for i = 1, #f.fontStrings do
+            if f.fontStrings[i] then
+                if f.fontStrings[i]["R"] then
+                    f.fontStrings[i]["R"]:Hide()
+                end
+                if f.fontStrings[i]["L"] then
+                    f.fontStrings[i]["L"]:Hide()
+                end
+            end
+        end
+    end
 end
 
 function EnableCloseOnEscape(shouldPrint)
@@ -922,7 +990,10 @@ function CreateBroker()
     if LDB and PCDLDBIcon and PCDLDB then
         PCDLDBIcon:Register("PCD", data, PcdDb["settings"])
         if not pcdShowMinimapButton then
-            PCDLDBIcon:Hide("PCD")
+            logIfLevel(2, "called hide on minimap button from create broker.")
+            C_Timer.After(0.5, function()
+                PCDLDBIcon:Hide("PCD")
+            end)
         end
     end
 end
@@ -1021,6 +1092,8 @@ SlashCmdList["PCD"] = function(msg)
         debugLevel = 1
     elseif msg == "db 2" then
         debugLevel = 2
+    elseif msg == "db 3" then
+        debugLevel = 3
     elseif msg == "help" then
         PrintHelp()
     end
