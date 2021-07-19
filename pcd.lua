@@ -1,5 +1,5 @@
 -- PCD start
-local pcdVersion = "1.09"
+local pcdVersion = "1.010"
 pcdUpdateFromSpellId = nil
 pcdShowMinimapButton = nil
 local pcdIsLoaded = nil
@@ -57,6 +57,7 @@ end
 
 function UpdateCds()
     logIfLevel(2, "Called update cds")
+    InitDbTable()
     if not pcdUpdateFromSpellId then
         GetProfessionCooldowns()
     else
@@ -318,7 +319,7 @@ function GetCooldownsFromSpellIds()
             if PcdDb[charName]["professions"]["Alchemy"]["skill"] >= 225 then
                 local highestTransmuteCd = GetTransmuteCd()
                 if highestTransmuteCd > 0 then
-                    SetCooldownForSpell("Transmute", "Alchemy", primalMightId)
+                    SetCooldownForSpell("Transmute", "Alchemy", highestTransmuteCd)
                 end
             end
         end
@@ -459,7 +460,9 @@ function UpdateCharacterProfessionDb()
     end
     for j = 0, 2 do
         if (profs[j]) then
-            PcdDb[charName]["professions"][profs[j].profName] = {}
+            if not PcdDb[charName]["professions"][profs[j].profName] then
+                PcdDb[charName]["professions"][profs[j].profName] = {}
+            end
             PcdDb[charName]["professions"][profs[j].profName]["skill"] = profs[j].skillLevel
             logIfLevel (2, "Updated prof for  " .. charName .. ": " .. profs[j].profName .. ", " .. profs[j].skillLevel)
         end
@@ -477,6 +480,9 @@ function InitDbTable()
         PcdDb[charName] = {}
         logIfLevel (1, "created PcdDb[char]")
     end
+    if not PcdDb[charName]["filters"] then
+        PcdDb[charName]["filters"] = {}
+    end
     if not PcdDb[charName]["professions"] then
         PcdDb[charName]["professions"] = {}
         logIfLevel (1, "created PcdDb[char][professions]")
@@ -489,17 +495,11 @@ function InitDbTable()
         PcdDb["settings"]["CloseOnEscape"] = "y"
     end
     if (not PcdDb["settings"]["UpdateFromSpellId"]) then
-        PcdDb["settings"]["UpdateFromSpellId"] = "n"
+        PcdDb["settings"]["UpdateFromSpellId"] = "y"
     end
-    if (not next(PcdDb[charName]["professions"])) then
+    if (not PcdDb[charName]["professions"] or #PcdDb[charName]["professions"] < 2) then
         UpdateCharacterProfessionDb()
-        logIfLevel(1, "Updated character prof db")
-    else
-        for p in pairs(PcdDb[charName]["professions"]) do
-            if (not p["skill"]) or (not type(p["skill"]) == "number") then
-                UpdateCharacterProfessionDb()
-            end
-        end
+        logIfLevel(1, "Updated character prof db for " .. charName)
     end
     if not PcdDb["settings"]["ShowMinimapButton"] then
         PcdDb["settings"]["ShowMinimapButton"] = "y"
@@ -603,6 +603,8 @@ function GetAllNamesAndCdsOnAccount()
                             end
                         else
                             logIfLevel(1, "Cooldown data not found for character " .. charName)
+                            logIfLevel(1, "pcd prof data: " .. tostring(pcdProfData["cooldowns"]))
+                            logIfLevel(1, "is type " .. type(pcdProfData["cooldowns"]))
                         end
                     end
                 end
@@ -948,10 +950,9 @@ function CreateBroker()
 		icon = "Interface\\Icons\\inv_misc_pocketwatch_01",
 		OnClick = function(self, button)
 			if (button == "LeftButton" and IsShiftKeyDown()) then
-				GetCooldownsFromSpellIds()
-                if pcdFrame and pcdFrame:IsShown() then
-                    CreatePCDFrame()
-                end
+				InitDbTable()
+                UpdateCharacterProfessionDb()
+                UpdateCds()
 			elseif (button == "LeftButton") then
 				UpdateDataFormatVersion()
                 if pcdFrame and pcdFrame:IsShown() then
@@ -962,6 +963,9 @@ function CreateBroker()
                 end
 			elseif (button == "RightButton" and IsShiftKeyDown()) then
 				FreshInit()
+                InitDbTable()
+                UpdateCharacterProfessionDb()
+                UpdateCds()
 			elseif (button == "RightButton") then
 				InitDbTable()
                 if pcdOptionsFrame and pcdOptionsFrame:IsShown() then
@@ -972,7 +976,7 @@ function CreateBroker()
 			end
 		end,
 		OnLeave = function(self, button)
-			doUpdateMinimapButton = pcdSho;
+			doUpdateMinimapButton = nil;
 		end,
 		OnTooltipShow = function(tooltip)
 			doUpdateMinimapButton = true;
