@@ -58,35 +58,18 @@ end
 function UpdateCds()
     logIfLevel(2, "Called update cds")
     InitDbTable()
-    if not pcdUpdateFromSpellId then
-        GetProfessionCooldowns()
-    else
-        GetCooldownsFromSpellIds()
-    end
+    GetCooldownsFromSpellIds()
 end
 
 local lootMsgFrame = CreateFrame("Frame")
 lootMsgFrame:RegisterEvent("CHAT_MSG_LOOT")
 lootMsgFrame:SetScript("OnEvent", function(self, event, arg1, arg2)
     if event == "CHAT_MSG_LOOT" then
-        if (arg1:find("^You create:") ~= nil) then
-            UpdateAndRepaintIfOpen()
-            logIfLevel(2, "Creation message event fired. Calling update at: ")
-            logIfLevel(1, GetTime())
-        end
+        UpdateAndRepaintIfOpen()
+        logIfLevel(2, "Creation message event fired. Calling update at: ")
+        logIfLevel(1, GetTime())
     end
 end)
-
-function getProfessionName(abilityName)
-    if string.find(abilityName, "Transmute") then
-        return "Alchemy"
-    elseif string.find(abilityName, "Cloth") or string.find(abilityName, "cloth") then
-        return "Tailoring"
-    elseif string.find(abilityName, "Brilliant Glass") then
-        return "Jewelcrafting"
-    end
-    return nil
-end
 
 local profNamesToConsider = { 
     ["Alchemy"] = true,
