@@ -1057,28 +1057,33 @@ function GetCooldownText(cooldown)
     return cooldownText
 end
 
+function TogglePcdFrame()
+    UpdateDataFormatVersion()
+    if pcdFrame and pcdFrame:IsShown() then
+        pcdFrame:Hide()
+    else
+        UpdateCds()
+        CreatePCDFrame()
+    end
+end
+
+function ToggleOptionsFrame()
+    InitDbTable()
+    if pcdOPtionsFrame and pcdOptionsFrame:IsShown() then
+        pcdOptionsFrame:Hide()
+    else
+        CreatePcdOptionsFrame()
+    end
+end
+
 SLASH_PCD1 = "/pcd"
 SlashCmdList["PCD"] = function(msg)
     if msg == "update" then
-        GetCooldownsFromSpellIds()
-        if pcdFrame and pcdFrame:IsShown() then
-            CreatePCDFrame()
-        end
+        UpdateCds()
     elseif msg == nil or msg == "" then
-        UpdateDataFormatVersion()
-        if pcdFrame and pcdFrame:IsShown() then
-            pcdFrame:Hide()
-        else
-            UpdateCds()
-            CreatePCDFrame()
-        end
+        TogglePcdFrame()
     elseif msg == "options" then
-        InitDbTable()
-        if pcdOptionsFrame and pcdOptionsFrame:IsShown() then
-            pcdOptionsFrame:Hide()
-        else
-            CreatePcdOptionsFrame()
-        end
+        ToggleOptionsFrame()
     elseif msg == "reset" then
         ResetPosition()
     elseif msg == "resetalldata" then

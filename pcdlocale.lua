@@ -1,4 +1,4 @@
-PCDL= {
+PCDL = {
     ["alchemy"] = {
         ["enUS"] = "alchemy",
         ["deDE"] = "alchimie",
