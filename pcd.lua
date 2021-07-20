@@ -209,8 +209,9 @@ function RenameCdInDb(prof, prevName, updatedName)
     end
 end
 
-function ShouldShowCdForCharacter(charName, cdName)
-
+function ShouldShowCdForCharacter(charName, profName, cdName)
+    local charName = UnitName("player")
+    return PcdDB[charName]["professions"][profName] and PcdDB[charName]["professions"][profName]["cooldowns"][cdName] ~= nil
 end
 
 function GetProfessionCooldowns()
