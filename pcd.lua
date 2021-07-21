@@ -1,5 +1,5 @@
 -- PCD start
-local pcdVersion = "1.010"
+local pcdVersion = "1.11"
 pcdUpdateFromSpellId = nil
 pcdShowMinimapButton = nil
 local pcdIsLoaded = nil
@@ -305,6 +305,7 @@ local allTransmuteIds = {
 --    25146, -- Elemental Fire
 }
 
+-- /script GetCooldownsFromSpellIds()
 function GetCooldownsFromSpellIds()
     logIfLevel(2, "updating from spell id")
     logIfLevel(1, GetTime())
@@ -319,8 +320,9 @@ function GetCooldownsFromSpellIds()
             if PcdDb[charName]["professions"]["Alchemy"]["skill"] >= 225 then
                 local highestTransmuteCd = GetTransmuteCd()
                 if highestTransmuteCd > 0 then
-                    SetCooldownForSpell("Transmute", "Alchemy", highestTransmuteCd)
+                    SetCooldownTo("Transmute", "Alchemy", highestTransmuteCd)
                 end
+                logIfLevel(2, "highest transmute cd: " .. highestTransmuteCd)
             end
         end
         if PcdDb[charName]["professions"]["Tailoring"] then
@@ -342,22 +344,29 @@ end
 
 function GetTransmuteCd()
     local best = -1
+    local bestId = -1
     for i = 1, #allTransmuteIds do
         local timestamp = GetCooldownTimestamp(allTransmuteIds[i])
         if timestamp > best then
             best = timestamp
+            bestId = allTransmuteIds[i]
         end
     end
-
+    logIfLevel(2, "should set transmute to " .. (best - GetServerTime()) .. " secs from now")
     return best
 end
 
 function SetCooldownForSpell(cdName, professionName, spellId)
+    local timestamp = GetCooldownTimestamp(spellId)
+    SetCooldownTo(cdName, professionName, timestamp)
+end
+
+function SetCooldownTo(cdName, professionName, timestamp)
     local charName = UnitName("Player")
     if not PcdDb[charName]["professions"][professionName]["cooldowns"] or not type(PcdDb[charName]["professions"][professionName]["cooldowns"]) == "table" then
         PcdDb[charName]["professions"][professionName]["cooldowns"] = {}
     end
-    PcdDb[charName]["professions"][professionName]["cooldowns"][cdName] = GetCooldownTimestamp(spellId)
+    PcdDb[charName]["professions"][professionName]["cooldowns"][cdName] = timestamp
     logIfLevel(1, "set cooldown timestamp of " .. cdName .. " to " .. PcdDb[charName]["professions"][professionName]["cooldowns"][cdName])
 end
 
@@ -983,6 +992,7 @@ function CreateBroker()
 			UpdateMinimapButton(tooltip, doUpdateMinimapButton);
 		end,
 		OnEnter = function(self, button)
+            UpdateCds()
 			GameTooltip:SetOwner(self, "ANCHOR_NONE")
 			GameTooltip:SetPoint("TOPLEFT", self, "BOTTOMLEFT")
 			doUpdateMinimapButton = true;
