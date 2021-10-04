@@ -43,6 +43,53 @@ profCdTrackerFrame:SetScript("OnEvent", function(self, event, arg1, ...)
     end
 end)
 
+PCDL = {
+    ["alchemy"] = {
+        ["enUS"] = "alchemy",
+        ["deDE"] = "alchimie",
+        ["esES"] = "alquimia",
+        ["frFR"] = "alchimie",
+        ["itIT"] = "alchemy",
+        ["ptBR"] = "alquimia",
+        ["ruRU"] = "клхимия",
+        ["koKR"] = "연금술",
+        ["zhCN"] = "炼金术",
+    },
+    ["tailoring"] = {
+        ["enUS"] = "tailoring",
+        ["deDE"] = "schneiderei",
+        ["esES"] = "sastrería",
+        ["frFR"] = "couture",
+        ["itIT"] = "tailoring",
+        ["ptBR"] = "alfaiataria",
+        ["ruRU"] = "портняжное дело",
+        ["koKR"] = "재봉술",
+        ["zhCN"] = "裁缝",
+    },
+    ["jewelcrafting"] = {
+        ["enUS"] = "jewelcrafting",
+        ["deDE"] = "juwelenschleifen",
+        ["esES"] = "joyería",
+        ["frFR"] = "joaillerie",
+        ["itIT"] = "jewelcrafting",
+        ["ptBR"] = "joalheria",
+        ["ruRU"] = "ювелирное дело",
+        ["koKR"] = "보석세공",
+        ["zhCN"] = "珠宝加工",
+    },
+    ["leatherworking"] = {
+        ["enUS"] = "leatherworking",
+        ["deDE"] = "lederverarbeitung",
+        ["esES"] = "peletería",
+        ["frFR"] = "travail du cuir",
+        ["itIT"] = "leatherworking",
+        ["ptBR"] = "couraria",
+        ["ruRU"] = "кожевничество",
+        ["koKR"] = "가죽세공",
+        ["zhCN"] = "制皮",
+    },
+}
+
 function UpdateAndRepaintIfOpen()
     UpdateCds()
     RepaintIfOpen()
@@ -72,10 +119,10 @@ lootMsgFrame:SetScript("OnEvent", function(self, event, arg1, arg2)
 end)
 
 local profNamesToConsider = { 
-    ["Alchemy"] = true,
-    ["Tailoring"] = true,
-    ["Leatherworking"] = true,
-    ["Jewelcrafting"] = true
+    ["alchemy"] = true,
+    ["tailoring"] = true,
+    ["leatherworking"] = true,
+    ["jewelcrafting"] = true
 }
 
 function initProfessionIfNeeded(profName)
@@ -94,48 +141,48 @@ function initProfessionIfNeeded(profName)
     end
 end
 
-local debugLevel = 1
+local debugLevel = 3
 function logIfLevel(dbLevel, text)
     if debugLevel <= dbLevel then
         print (text)
     end
 end
 
-local lastcalled = nil
-function internalGetProfessionCooldowns()
-    if lastcalled and GetServerTime() - lastcalled < 1 then
-        logIfLevel (1, "SKIP internalGetProfCd cause called too early. diff only: " .. (GetServerTime() - lastcalled))
-        return
-    else
-        lastcalled = GetServerTime()
-    end
-    local charName = UnitName("player")
-    logIfLevel(1, "getting prof cd for " .. charName)
-    for i = 1, GetNumTradeSkills() do
-        local secondsLeft = GetTradeSkillCooldown(i);
-        if (secondsLeft and secondsLeft > 60) then
-            local skillName = GetTradeSkillInfo(i);
-            if (skillName) then
-                local professionGuess = getProfessionName(skillName)
-                if not professionGuess then
-                    logIfLevel (3, "PCD Error: Uknown profession skill found, with name: " .. skillName)
-                    return
-                end
-                logIfLevel (1, "prof guess : " .. professionGuess)
-                initProfessionIfNeeded(professionGuess)
-                local hoursLeft = secondsLeft / 3600
-                local doneAt = GetServerTime() + secondsLeft
-                logIfLevel (1, "calculate done at as: " .. (doneAt / 3600000))
-                logIfLevel (1, "hours left is " .. hoursLeft)
-                if (IsVanillaTransmute(skillName) or IsTransmuteTBC(skillName)) then
-                    skillName = "Transmute"
-                end
-                PcdDb[charName]["professions"][professionGuess]["cooldowns"][skillName] = doneAt
-                logIfLevel(2, "saved " .. skillName .. ": " .. string.format("%.2f", hoursLeft) .. " from now.")
-            end
-        end
-    end
-end
+-- local lastcalled = nil
+-- function internalGetProfessionCooldowns()
+--     if lastcalled and GetServerTime() - lastcalled < 1 then
+--         logIfLevel (1, "SKIP internalGetProfCd cause called too early. diff only: " .. (GetServerTime() - lastcalled))
+--         return
+--     else
+--         lastcalled = GetServerTime()
+--     end
+--     local charName = UnitName("player")
+--     logIfLevel(1, "getting prof cd for " .. charName)
+--     for i = 1, GetNumTradeSkills() do
+--         local secondsLeft = GetTradeSkillCooldown(i);
+--         if (secondsLeft and secondsLeft > 60) then
+--             local skillName = GetTradeSkillInfo(i);
+--             if (skillName) then
+--                 local professionGuess = getProfessionName(skillName)
+--                 if not professionGuess then
+--                     logIfLevel (3, "PCD Error: Uknown profession skill found, with name: " .. skillName)
+--                     return
+--                 end
+--                 logIfLevel (1, "prof guess : " .. professionGuess)
+--                 initProfessionIfNeeded(professionGuess)
+--                 local hoursLeft = secondsLeft / 3600
+--                 local doneAt = GetServerTime() + secondsLeft
+--                 logIfLevel (1, "calculate done at as: " .. (doneAt / 3600000))
+--                 logIfLevel (1, "hours left is " .. hoursLeft)
+--                 if (IsVanillaTransmute(skillName) or IsTransmuteTBC(skillName)) then
+--                     skillName = "Transmute"
+--                 end
+--                 PcdDb[charName]["professions"][professionGuess]["cooldowns"][skillName] = doneAt
+--                 logIfLevel(2, "saved " .. skillName .. ": " .. string.format("%.2f", hoursLeft) .. " from now.")
+--             end
+--         end
+--     end
+-- end
 
 function UpdateTo0103()
     if PcdDb and PcdDb["settings"] and not PcdDb["settings"]["version"] then
@@ -300,7 +347,8 @@ function GetCooldownsFromSpellIds()
     if PcdDb and PcdDb[charName] and PcdDb[charName]["professions"] then
         if PcdDb[charName]["professions"]["Alchemy"] then
             logIfLevel(1, "alchemy found")
-            if PcdDb[charName]["professions"]["Alchemy"]["skill"] >= 225 then
+            local alchSkill = PcdDb[charName]["professions"]["Alchemy"]["skill"]
+            if alchSkill ~= nil and alchSkill >= 225 then
                 local highestTransmuteCd = GetTransmuteCd()
                 if highestTransmuteCd > 0 then
                     SetCooldownTo("Transmute", "Alchemy", highestTransmuteCd)
@@ -310,7 +358,8 @@ function GetCooldownsFromSpellIds()
         end
         if PcdDb[charName]["professions"]["Tailoring"] then
             logIfLevel(1, "Tailoring found")
-            if PcdDb[charName]["professions"]["Tailoring"]["skill"] >= 350 then
+            local tailSkill = PcdDb[charName]["professions"]["Tailoring"]["skill"]
+            if tailSkill ~= nil and tailSkill >= 350 then
                 SetCooldownForSpell("Primal Mooncloth", "Tailoring", primalMoonclothId)
                 SetCooldownForSpell("Spellcloth", "Tailoring", spellclothId)
                 SetCooldownForSpell("Shadowcloth", "Tailoring", shadowclothId)
@@ -318,7 +367,8 @@ function GetCooldownsFromSpellIds()
         end
         if PcdDb[charName]["professions"]["Jewelcrafting"] then
             logIfLevel(1, "Jewelcrafting found")
-            if PcdDb[charName]["professions"]["Jewelcrafting"]["skill"] >= 350 then
+            local jcSkill = PcdDb[charName]["professions"]["Jewelcrafting"]["skill"]
+            if jcSkill ~=nil and jcSkill >= 350 then
                 SetCooldownForSpell("Brilliant Glass", "Jewelcrafting", brilliantGlassId)
             end
         end
@@ -341,7 +391,9 @@ end
 
 function SetCooldownForSpell(cdName, professionName, spellId)
     local timestamp = GetCooldownTimestamp(spellId)
+    local localSpellName = GetLocalSpellName(spellId)
     SetCooldownTo(cdName, professionName, timestamp)
+    print (GetLocalSpellName(spellId))
 end
 
 function SetCooldownTo(cdName, professionName, timestamp)
@@ -351,6 +403,16 @@ function SetCooldownTo(cdName, professionName, timestamp)
     end
     PcdDb[charName]["professions"][professionName]["cooldowns"][cdName] = timestamp
     logIfLevel(1, "set cooldown timestamp of " .. cdName .. " to " .. PcdDb[charName]["professions"][professionName]["cooldowns"][cdName])
+end
+
+function GetLocalSpellName(spellId) 
+    local spellName = GetSpellInfo(spellId);
+    if (spellName ~= nil) then
+        logIfLevel(2, spellName)
+    else
+        logIfLevel (2, "spell id " .. spellId .. " had nil name.")
+    end
+    return spellName
 end
 
 function GetCooldownTimestamp(spellId)
@@ -425,6 +487,16 @@ function IsTransmuteTBC(skillName)
     return skillName and tbcTransmuteSkillNames[skillName]
 end
 
+function GetEnglishProfessionName(name)
+    local clientLocale = GetLocale()
+    for p in pairs(profNamesToConsider) do
+        if PCDL[p][clientLocale] == name:lower() then
+            logIfLevel(2, "found " .. p)
+            return Capitalize(p)
+        end
+    end
+end
+
 function UpdateCharacterProfessionDb()
     local charName = UnitName("player")
     local profs = {}
@@ -437,9 +509,13 @@ function UpdateCharacterProfessionDb()
         if (isHeader and skillName == TRADE_SKILLS) then
             section = 2;
         end
-        if (not isHeader and section == 2) then
-            logIfLevel (1, "found " .. skillName .. " with primary count " .. primaryCount)
-            if (primaryCount < 3 and skillName) and profNamesToConsider[skillName] ~= nil and #profs <= 2 then
+        if skillName ~= nil then
+            skillName = GetEnglishProfessionName(skillName)
+        end
+        if (skillName ~= nil and not isHeader and section == 2) then
+            logIfLevel (2, "found " .. skillName .. " with primary count " .. primaryCount)
+            -- GetEnglishProfessionName(skillName)
+            if (primaryCount < 3 and skillName ~= nil) and #profs <= 2 then
                 logIfLevel(2, "added " .. skillName .. " to PCD database.")
                 primaryCount = primaryCount + 1;
                 local pcdSkillData = {
@@ -456,6 +532,7 @@ function UpdateCharacterProfessionDb()
                 PcdDb[charName]["professions"][profs[j].profName] = {}
             end
             PcdDb[charName]["professions"][profs[j].profName]["skill"] = profs[j].skillLevel
+            initProfessionIfNeeded(profs[j].profName)
             logIfLevel (2, "Updated prof for  " .. charName .. ": " .. profs[j].profName .. ", " .. profs[j].skillLevel)
         end
     end
