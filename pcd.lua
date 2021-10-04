@@ -1,5 +1,5 @@
 -- PCD start
-local pcdVersion = "1.11"
+local pcdVersion = "1.12-pre"
 pcdUpdateFromSpellId = nil
 pcdShowMinimapButton = nil
 local pcdIsLoaded = nil
@@ -393,7 +393,6 @@ function SetCooldownForSpell(cdName, professionName, spellId)
     local timestamp = GetCooldownTimestamp(spellId)
     local localSpellName = GetLocalSpellName(spellId)
     SetCooldownTo(cdName, professionName, timestamp)
-    print (GetLocalSpellName(spellId))
 end
 
 function SetCooldownTo(cdName, professionName, timestamp)
