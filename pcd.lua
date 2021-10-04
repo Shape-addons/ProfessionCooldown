@@ -111,7 +111,7 @@ function initProfessionIfNeeded(profName)
     end
 end
 
-local debugLevel = 3
+local debugLevel = 1
 function logIfLevel(dbLevel, text)
     if debugLevel <= dbLevel then
         print (text)
@@ -455,7 +455,7 @@ function UpdateCharacterProfessionDb()
             section = 2;
         end
         if (not isHeader and section == 2) then
-            logIfLevel (2, "found " .. skillName .. " with primary count " .. primaryCount)
+            logIfLevel (1, "found " .. skillName .. " with primary count " .. primaryCount)
             if (primaryCount < 3 and skillName) and profNamesToConsider[skillName] ~= nil and #profs <= 2 then
                 logIfLevel(2, "added " .. skillName .. " to PCD database.")
                 primaryCount = primaryCount + 1;
@@ -1111,4 +1111,4 @@ SlashCmdList["PCD"] = function(msg)
     elseif msg == "help" then
         PrintHelp()
     end
-end 
+end
