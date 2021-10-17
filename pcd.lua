@@ -1,5 +1,5 @@
 -- PCD start
-local pcdVersion = "1.11"
+local pcdVersion = "1.13"
 pcdUpdateFromSpellId = nil
 pcdShowMinimapButton = nil
 local pcdIsLoaded = nil
@@ -39,6 +39,7 @@ profCdTrackerFrame:SetScript("OnEvent", function(self, event, arg1, ...)
             pcdShowMinimapButton = true
             logIfLevel(2, "show mini map button set to true")
         end
+        UpdateCds()
         CreateBroker()
     end
 end)
@@ -95,6 +96,28 @@ local profNamesToConsider = {
     ["Jewelcrafting"] = true
 }
 
+local cdNamesToConsider = {
+    ["Primal Mooncloth"] = true,
+    ["Spellcloth"] = true,
+    ["Shadowcloth"] = true,
+    ["Brilliant Glass"] = true,
+    ["Transmute"] = true    
+}
+
+local STD_WHITE = "|cffffffff"
+local classColors = {
+    [1] = "|cffC69B6D", -- warrior
+    [2] = "|cfff48cba",  -- paladin
+    [3] = "|cffaad372",  -- hunter
+    [4] = "|cfffff468",  -- rogue
+    [5] = "|cffffffff",  -- priest
+    [7] = "|cff0070DD", -- shaman
+    [8] = "|cff3fc7eb",  -- mage
+    [9] = "|cff8788ee", -- lock
+    [11] = "|cffff7c0a" -- druid
+    -- [11] = "|cff7c0aff" -- druid
+}
+
 function initProfessionIfNeeded(profName)
     local charName = UnitName("player")
     if not PcdDb[charName] then 
@@ -111,7 +134,7 @@ function initProfessionIfNeeded(profName)
     end
 end
 
-local debugLevel = 1
+local debugLevel = 3
 function logIfLevel(dbLevel, text)
     if debugLevel <= dbLevel then
         print (text)
@@ -224,10 +247,6 @@ function RenameCdInDb(prof, prevName, updatedName)
             end
         end
     end
-end
-
-function ShouldShowCdForCharacter(charName, cdName)
-
 end
 
 function GetProfessionCooldowns()
@@ -478,6 +497,18 @@ function UpdateCharacterProfessionDb()
     end
 end
 
+function InitFilterIfUndefined(charName, spellName, initValue)
+    if PcdDb[charName]["filters"][spellName] == nil then
+        PcdDb[charName]["filters"][spellName] = initValue
+    end
+end
+
+function InitGlobalFilterIfUndefined(spellName)
+    if PcdDb["settings"]["filters"][spellName] == nil then
+        PcdDb["settings"]["filters"][spellName] = "x"
+    end
+end
+
 function InitDbTable()
     local charName = UnitName("player")
 
@@ -489,8 +520,23 @@ function InitDbTable()
         PcdDb[charName] = {}
         logIfLevel (1, "created PcdDb[char]")
     end
-    if not PcdDb[charName]["filters"] then
-        PcdDb[charName]["filters"] = {}
+    if not PcdDb[charName]["class"] then
+        PcdDb[charName]["class"] = select(3, UnitClass("Player"))
+    end
+    for dbCharName, charOptions in pairs(PcdDb) do
+        logIfLevel(1, "settings for " .. dbCharName)
+        if not PcdDb[dbCharName]["filters"] then
+            PcdDb[dbCharName]["filters"] = {}
+        end
+        local initVal = "y"
+        if dbCharName == "settings" then 
+            initVal = "x" 
+        else 
+            InitFilterIfUndefined(dbCharName, "Global", "x")
+        end
+        for cdName in pairs(cdNamesToConsider) do
+            InitFilterIfUndefined(dbCharName, cdName, initVal)
+        end
     end
     if not PcdDb[charName]["professions"] then
         PcdDb[charName]["professions"] = {}
@@ -505,6 +551,15 @@ function InitDbTable()
     end
     if (not PcdDb["settings"]["UpdateFromSpellId"]) then
         PcdDb["settings"]["UpdateFromSpellId"] = "y"
+    end
+    if (not PcdDb["settings"]["ClassColors"]) then
+        PcdDb["settings"]["ClassColors"] = "y"
+    end
+    if (not PcdDb["settings"]["filters"]) then
+        PcdDb["settings"]["filters"] = {}
+    end
+    for cdName in pairs(cdNamesToConsider) do
+        InitGlobalFilterIfUndefined(cdName)
     end
     if (not PcdDb[charName]["professions"] or #PcdDb[charName]["professions"] < 2) then
         UpdateCharacterProfessionDb()
@@ -551,24 +606,24 @@ function SetFrameTitle(theFrame, titleText)
     theFrame.title = title
 end
 
-function AddTextToFrame(theFrame, text, firstPosition, secondPosition)
+function AddTextToFrame(theFrame, text, firstPosition, x, y)
     local font = theFrame:CreateFontString(nil, "OVERLAY")
     font:SetFontObject("GameFontHighlight")
-    font:SetPoint(firstPosition, theFrame, secondPosition)
+    font:SetPoint(firstPosition, x, y)
     font:SetText(text)
     font:SetFont("Fonts\\FRIZQT__.ttf", pcdSettings.entrySize, "OUTLINE")
     logIfLevel (1, "added test frame stuff")
     return font
 end
 
-function AddTextWithCDToFrame(theFrame, leftText, rightText, position, cdColor)
+function AddTextWithCDToFrame(theFrame, charName, cdText, rightText, position, cdColor)
     if (not theFrame.fontStrings) then
         theFrame.fontStrings = {}
     end
     local nameFont
+    local cdNameFont
     local cdFont
     if not theFrame.fontStrings[position] then
-
         theFrame.fontStrings[position] = { 
             ["L"] = theFrame:CreateFontString(nil, "Overlay"), 
             ["R"] = theFrame:CreateFontString(nil, "Overlay")
@@ -577,13 +632,13 @@ function AddTextWithCDToFrame(theFrame, leftText, rightText, position, cdColor)
     nameFont = theFrame.fontStrings[position]["L"]
     cdFont = theFrame.fontStrings[position]["R"]
 
-
     local topSpacing = -6
     local actualPosition = topSpacing - pcdSettings.spacing * (position + 1)
     nameFont:SetFontObject("GameFontHighlight")
     nameFont:SetPoint("TOPLEFT", 10, actualPosition)
-    nameFont:SetText(leftText)
     nameFont:SetFont("Fonts\\FRIZQT__.ttf", pcdSettings.entrySize, "OUTLINE")
+    local cColorString = GetClassColorString(charName)
+    nameFont:SetText(cColorString .. charName .. STD_WHITE .. " - " .. cdText)
 
     cdFont:SetFontObject("GameFontHighlight")
     cdFont:SetText(rightText)
@@ -595,27 +650,27 @@ function AddTextWithCDToFrame(theFrame, leftText, rightText, position, cdColor)
     cdFont:Show()
 end
 
+function IsNotNullTable(item)
+    return item ~= nil and type(item) == "table"
+end
+
 function GetAllNamesAndCdsOnAccount()
     local charSpellAndCd = {}
     local allOnAccount = PcdDb
     if (not allOnAccount) then
         return
     end
-    for charName, pcdProfessions in pairs(PcdDb) do
-        if not (charName == "settings") then
-            if pcdProfessions ~= nil and type(pcdProfessions) == "table" then
-                for profTag, pcdProfs in pairs(pcdProfessions) do 
-                    for profName, pcdProfData in pairs(pcdProfs) do
-                        if pcdProfData["cooldowns"] ~= nil and type(pcdProfData["cooldowns"]) == "table" then
-                            for spellName, doneAt in pairs(pcdProfData["cooldowns"]) do
-                                table.insert(charSpellAndCd, {charName, spellName, doneAt} )
-                            end
-                        else
-                            logIfLevel(1, "Cooldown data not found for character " .. charName)
-                            logIfLevel(1, "pcd prof data: " .. tostring(pcdProfData["cooldowns"]))
-                            logIfLevel(1, "is type " .. type(pcdProfData["cooldowns"]))
-                        end
+    for charName, charData in pairs(PcdDb) do
+        if not (charName == "settings") and IsNotNullTable(charData) and IsNotNullTable(charData["professions"]) then
+            for profName, pcdProfData in pairs(charData["professions"]) do
+                if IsNotNullTable(pcdProfData) and IsNotNullTable(pcdProfData["cooldowns"]) then
+                    for spellName, doneAt in pairs(pcdProfData["cooldowns"]) do
+                        table.insert(charSpellAndCd, {charName, spellName, doneAt} )
                     end
+                else
+                    logIfLevel(1, "Cooldown data not found for character " .. charName)
+                    logIfLevel(1, "pcd prof data: " .. tostring(pcdProfData))
+                    logIfLevel(1, "is type " .. type(pcdProfData))
                 end
             end
         end
@@ -646,19 +701,19 @@ function CreatePcdOptionsFrame()
     end
 
     if not (pcdOptionsFrame.CloseOnEscape) then
-        pcdOptionsFrame.CloseOnEscape = CreateFrame("CheckButton", "CloseOnEscape_CheckButton", pcdOptionsFrame, "ChatConfigCheckButtonTemplate")
+        pcdOptionsFrame.CloseOnEscape = CreateFrame("CheckButton", "CloseOnEscape_CheckButton", pcdOptionsFrame, "UICheckButtonTemplate")
     end
     if not (pcdOptionsFrame.CloseOnEscapeText) then
         pcdOptionsFrame.CloseOnEscapeText = pcdOptionsFrame:CreateFontString(nil, "OVERLAY")
     end
     if not (pcdOptionsFrame.UpdateFromSpellId) then
-        pcdOptionsFrame.UpdateFromSpellId = CreateFrame("CheckButton", "UpdateFromSpellId_CheckButton", pcdOptionsFrame, "ChatConfigCheckButtonTemplate")
+        pcdOptionsFrame.UpdateFromSpellId = CreateFrame("CheckButton", "UpdateFromSpellId_CheckButton", pcdOptionsFrame, "UICheckButtonTemplate")
     end
     if not (pcdOptionsFrame.UpdateFromSpellIdText) then
         pcdOptionsFrame.UpdateFromSpellIdText = pcdOptionsFrame:CreateFontString(nil, "OVERLAY")
     end
     if not (pcdOptionsFrame.ShowMinimapButton) then
-        pcdOptionsFrame.ShowMinimapButton = CreateFrame("CheckButton", "UpdateMiniMap_CheckButton", pcdOptionsFrame, "ChatConfigCheckButtonTemplate")
+        pcdOptionsFrame.ShowMinimapButton = CreateFrame("CheckButton", "UpdateMiniMap_CheckButton", pcdOptionsFrame, "UICheckButtonTemplate")
     end
     if not (pcdOptionsFrame.ShowMinimapButtonText) then
         pcdOptionsFrame.ShowMinimapButtonText = pcdOptionsFrame:CreateFontString(nil, "OVERLAY")
@@ -749,7 +804,7 @@ function CreatePcdOptionsFrame()
     
     pcdOptionsFrame:Show()
     pcdOptionsFrame:SetPoint("CENTER", UIParent, "CENTER")
-    pcdOptionsFrame:SetSize(400, 100)
+    pcdOptionsFrame:SetSize(400, 120)
 end
 
 pcdFrame = CreateFrame("Frame", "PCDOverviewFrame", UIParent)
@@ -777,24 +832,408 @@ function CreatePCDFrame()
     SetFrameTitle(pcdFrame, "Profession CD Tracker")
     RegisterFrameForDrag(pcdFrame)
     local charSpellAndCd = GetAllNamesAndCdsOnAccount()
-    local frameHeight = 50 + 17 * #charSpellAndCd
-    pcdFrame:SetSize(350,frameHeight)
     local sortedProfData = {}
     for i = 1, #charSpellAndCd do
         sortedProfData[i] = charSpellAndCd[i]
     end
     table.sort(sortedProfData, function (lhs, rhs) return lhs[3] < rhs[3] end)
-
+    
+    
     ClearFontStrings(pcdFrame)
+    local printedItemCount = 0
     for i = 1, #sortedProfData do
         if sortedProfData[i] then
             local line = sortedProfData[i]
-            local cooldownText = GetCooldownText(line[3])
-            AddTextWithCDToFrame(pcdFrame, line[1] .. " - " .. line[2], "" .. cooldownText.text, i, cooldownText.color)
+            logIfLevel(1, "should show for " .. line[1] .. " " .. line[2] .. " : " .. tostring(ShouldShowProf(line[1], line[2])))
+            if ShouldShowProf(line[1], line[2]) then
+                local cooldownText = GetCooldownText(line[3])
+                AddTextWithCDToFrame(pcdFrame, line[1], line[2], "" .. cooldownText.text, printedItemCount + 1, cooldownText.color)
+                printedItemCount = printedItemCount + 1
+            else 
+                logIfLevel(1, "skipped " .. line[1] .. " - " .. line[2])
+            end
         end
     end
+    local frameHeight = 50 + 17 * printedItemCount
+    pcdFrame:SetSize(350,frameHeight)
     pcdFrame:Show()
     logIfLevel (1, "PCD frame created")
+end
+
+
+pcdFiltersFrame = CreateFrame("Frame", "PCDFiltersFrame", UIParent)
+pcdFiltersFrame:Hide()
+function CreatePcdFiltersFrame() 
+    -- char
+    pcdFiltersFrame:ClearAllPoints()
+    pcdFiltersFrame:Hide()
+    if not pcdFiltersFrame.close then
+        pcdFiltersFrame.close = CreateFrame("Button", "$parentClose", pcdFiltersFrame, "UIPanelCloseButton")
+    end
+    pcdFiltersFrame.close:SetSize(24, 24)
+    pcdFiltersFrame.close:SetPoint("TOPRIGHT")
+    pcdFiltersFrame.close:SetScript("OnClick", function(self) self:GetParent():Hide(); end)
+    
+    if not (pcdFiltersFrame.CheckButtons) then
+        pcdFiltersFrame.CheckButtons = {}
+    end
+
+    if not pcdFiltersFrame.CharNames then
+        pcdFiltersFrame.CharNames = {}
+    end
+
+    if not pcdFiltersFrame.Header then
+        pcdFiltersFrame.Header = {}
+    end
+
+    AddFiltersHeader(pcdFiltersFrame)
+
+    if not pcdFiltersFrame.CharIndices then
+        pcdFiltersFrame.CharIndices = {}
+    end
+    CreateGlobalCheckButtonForCds()
+    local heightMod = addPcdFilterData()
+
+    if PcdDb and PcdDb["settings"] and PcdDb["settings"]["CloseOnEscape"] == "y" then
+        EnableCloseOnEscape(false)
+    end
+    SetFrameTitle(pcdFiltersFrame, "Profession CD Filters")
+    RegisterFrameForDrag(pcdFiltersFrame)
+
+    pcdFiltersFrame:Show()
+    pcdFiltersFrame:SetPoint("CENTER", UIParent, "CENTER")
+    pcdFiltersFrame:SetSize(400, 20 + heightMod * 30)
+end
+
+function GetSpellIndex(cdName)
+    if cdName == "Global"           then return 1 end
+    if cdName == "Transmute"        then return 2 end
+    if cdName == "Brilliant Glass"  then return 3 end
+    if cdName == "Spellcloth"       then return 4 end
+    if cdName == "Primal Mooncloth" then return 5 end
+    if cdName == "Shadowcloth"      then return 6 end
+    return -1
+end
+
+function GetSpellNameFromIndex(index)
+    if index == 1 then return "Global" end
+    if index == 2 then return "Transmute" end
+    if index == 3 then return "Brilliant Glass" end
+    if index == 4 then return "Spellcloth" end
+    if index == 5 then return "Primal Mooncloth" end
+    if index == 6 then return "Shadowcloth" end
+    return "Unknown"
+end
+
+function AddFiltersHeader(frame)
+    frame.Header[1] = AddTextToFrame(frame, "Global", "TOPLEFT", 110, -50)
+    frame.Header[2] = AddIconToFiltersFrame(160, 23571) -- primal might
+    frame.Header[3] = AddIconToFiltersFrame(190, 35945) -- brilliant glass
+    frame.Header[4] = AddIconToFiltersFrame(220, 24271) -- spellcloth
+    frame.Header[5] = AddIconToFiltersFrame(250, 21845) -- primal mooncloth
+    frame.Header[6] = AddIconToFiltersFrame(280, 24272) -- shadowcloth
+end
+
+function AddIconToFiltersFrame(posX, itemId)
+    return AddIconToFrame(pcdFiltersFrame, "TOPLEFT", posX, -50, 20, 20, GetItemIcon(itemId))
+end
+
+function AddIconToFrame(frame, pos, posX, posY, width, height, icon) 
+    local iconFrame = frame:CreateTexture(icon, "OVERLAY")
+    iconFrame:SetWidth(width)
+    iconFrame:SetHeight(height)
+    iconFrame:SetPoint(pos, posX, posY)
+    iconFrame:SetTexture(icon)
+    return iconFrame
+end
+
+function addPcdFilterData()
+    pcdFiltersFrame.CharIndices = {
+        ["Global"] = 1,
+        -- ["Shapeshiftt"] = 2,
+        -- ["Dotshift"] = 3
+    }
+    local chars = GetAllChars(true)
+    local counter = 2
+    for charName, charData in pairs(chars) do
+        pcdFiltersFrame.CharIndices[charName] = counter
+        CreateNameTextForFilter(counter, pcdFiltersFrame, charName)
+        for i = 1, 6 do
+            CreateCheckButtonForCharacterFilter(counter, pcdFiltersFrame, charName, GetSpellNameFromIndex(i), i)
+        end
+        counter = counter + 1
+    end
+    InitAlphas()
+    return counter
+    -- CreateNameTextForFilter(2, pcdFiltersFrame, "Shapeshiftt")
+    -- CreateCheckButtonForCharacterFilter(2, pcdFiltersFrame, "Shapeshiftt", "Global", 1)
+    -- CreateCheckButtonForCharacterFilter(2, pcdFiltersFrame, "Shapeshiftt", "Transmute", 2)
+    -- CreateCheckButtonForCharacterFilter(2, pcdFiltersFrame, "Shapeshiftt", "Brilliant Glass", 3)
+    -- CreateCheckButtonForCharacterFilter(2, pcdFiltersFrame, "Shapeshiftt", "Spellcloth", 4)
+    -- CreateCheckButtonForCharacterFilter(2, pcdFiltersFrame, "Shapeshiftt", "Primal Mooncloth", 5)
+    -- CreateCheckButtonForCharacterFilter(2, pcdFiltersFrame, "Shapeshiftt", "Shadowcloth", 6)
+
+    -- CreateNameTextForFilter(3, pcdFiltersFrame, "Dotshift")
+    -- CreateCheckButtonForCharacterFilter(3, pcdFiltersFrame, "Dotshift", "Global", 1)
+    -- CreateCheckButtonForCharacterFilter(3, pcdFiltersFrame, "Dotshift", "Transmute", 2)
+    -- CreateCheckButtonForCharacterFilter(3, pcdFiltersFrame, "Dotshift", "Brilliant Glass", 3)
+    -- CreateCheckButtonForCharacterFilter(3, pcdFiltersFrame, "Dotshift", "Spellcloth", 4)
+    -- CreateCheckButtonForCharacterFilter(3, pcdFiltersFrame, "Dotshift", "Primal Mooncloth", 5)
+    -- CreateCheckButtonForCharacterFilter(3, pcdFiltersFrame, "Dotshift", "Shadowcloth", 6)
+end
+
+function GetClassColorString(charName)
+    if PcdDb["settings"]["ClassColors"] == "y" and PcdDb[charName] and PcdDb[charName]["class"] then 
+        return classColors[PcdDb[charName]["class"]] 
+    else
+        return STD_WHITE
+    end
+end
+
+function CreateNameTextForFilter(index, frame, charName)
+    if not frame.CharNames then
+        frame.CharNames = {}
+    end
+    local cColorString = GetClassColorString(charName)
+    if not frame.CharNames[index] then
+        frame.CharNames[index] = AddTextToFrame(frame, cColorString .. charName, "TOPLEFT", 20, (index - 1) * -20 - 85)
+    else
+        frame.CharNames[index]:SetText(cColorString .. charName)
+    end
+end
+
+function GetFiltersForCharacter(charName)
+    return PcdDb[charName]["filters"]["Global"]
+end
+
+function CreateGlobalCheckButtonForCds()
+    CreateNameTextForFilter(1, pcdFiltersFrame, "Global")
+    for cdName in pairs(cdNamesToConsider) do
+        local checkedValue = "x"
+        if PcdDb["settings"]["filters"][cdName] == "y" then checkedValue = "y" else checkedValue = nil end
+        local spellIndex = GetSpellIndex(cdName)
+        CreateCheckButton(1, pcdFiltersFrame, spellIndex)
+        pcdFiltersFrame.CheckButtons[1][spellIndex]:SetChecked(checkedValue)
+        pcdFiltersFrame.CheckButtons[1][spellIndex]:SetScript("OnClick", 
+            function()
+                local isChecked = pcdFiltersFrame.CheckButtons[1][spellIndex]:GetChecked()
+                if (isChecked) then
+                    pcdFiltersFrame.CheckButtons[1][spellIndex]:SetChecked(true)
+                    SetShouldShowGlobal(cdName, "y")
+                else
+                    pcdFiltersFrame.CheckButtons[1][spellIndex]:SetChecked(nil)
+                    SetShouldShowGlobal(cdName, "n")
+                end
+                HandleGlobalCdClick(cdName, not isChecked)
+                UpdateAndRepaintIfOpen()
+            end)
+    end
+end
+
+-- function CreateGlobalCheckButtonForCharacters(cdOrCharacter)
+--     local index = 1
+--     if not frame.CheckButtons[index] then
+--         frame.CheckButtons[index] = {}
+--     end
+--     if not frame.CheckButtons[index][1] then
+--         frame.CheckButtons[index][1] = CreateFrame("CheckButton", "Filter_GlobalCheckButton_" .. index .. "_" .. 1, pcdFiltersFrame, "UICheckButtonTemplate")
+--     end
+
+--     local charsWithProfessions = GetAllChars(true)
+--     local index = 1
+--     for charName in pairs(charsWithProfessions) do
+--         local checkedValue = "x"
+--         if PcdDb[charName]["filters"]["Global"] == "y" then checkedValue = "y" else "n" end
+--         CreateCheckButton(1, frame, 1)
+--         index = index + 1
+--     end
+-- end
+
+function CharacterHasCooldownWithName(charName, cdName)
+    local charData = PcdDb[charName]["professions"]
+    if IsNotNullTable(charData) then
+        for profName, cds in pairs(charData) do
+            logIfLevel(1, "CharacterHasCooldownWithName: " .. charName .. " : " .. profName)
+            if PcdDb[charName]["professions"][profName]["cooldowns"][cdName] ~= nil then
+                return true
+            end
+        end 
+    else
+        logIflevel(1, 'table was null for ' .. charName .. " and " .. cdName)
+    end 
+    return false
+end
+
+function CharacterHasProfessionsCooldowns(charName)
+    local charData = PcdDb[charName]["professions"]
+    if IsNotNullTable(charData) then
+        for profName, cds in pairs(charData) do
+            local cdTable = PcdDb[charName]["professions"][profName]["cooldowns"]
+            for cdName, x in pairs(cdNamesToConsider) do
+                if cdTable[cdName] then
+                    return true
+                end
+            end
+            logIfLevel(1, "CharacterHasCooldownWithName: " .. charName .. " : " .. profName .. " num cds: " .. #cdTable)
+        end
+    else
+        logIflevel(1, 'CharacterHasProfessionsCooldowns: charData table was null for ' .. charName)
+    end 
+    return false
+end
+
+function GetAllChars(filterWithCds)
+    local dbData = {}
+    for charName, charData in pairs(PcdDb) do
+        if not (charName == "settings") then
+            if (not filterWithCds) or CharacterHasProfessionsCooldowns(charName) then
+                logIfLevel(1, "added " .. charName .. " to dbData")
+                dbData[charName] = charData
+            end
+        end
+    end
+    return dbData
+end
+
+
+function CreateCheckButton(index, frame, spellIndex)
+    if not frame.CheckButtons[index] then
+        frame.CheckButtons[index] = {}
+    end
+    if not frame.CheckButtons[index][spellIndex] then
+        frame.CheckButtons[index][spellIndex] = CreateFrame("CheckButton", "Filter_CheckButton_" .. index .. "_" .. spellIndex, pcdFiltersFrame, "UICheckButtonTemplate")
+    end
+    frame.CheckButtons[index][spellIndex]:SetPoint("TOPLEFT", 100 + spellIndex * 30, (index - 1) * -20 - 80)
+    frame.CheckButtons[index][spellIndex]:SetSize(20, 20)
+end
+
+function CreateCheckButtonForCharacterFilter(index, frame, charName, spellName, spellIndex)
+    CreateCheckButton(index, frame, spellIndex)
+    if PcdDb[charName]["filters"][spellName] == "y" then
+        frame.CheckButtons[index][spellIndex]:SetChecked(true)
+    else
+        frame.CheckButtons[index][spellIndex]:SetChecked(nil)
+    end
+    if spellIndex > 1 and not (CharacterHasCooldownWithName(charName, spellName)) then
+        frame.CheckButtons[index][spellIndex]:Disable()
+        logIfLevel(1, charName .. " does not have " .. spellName .. " so disabling: [" .. index .. "][" .. spellIndex .. "]")
+    end
+    frame.CheckButtons[index][spellIndex]:SetScript("OnClick", 
+        function()
+            local isChecked = frame.CheckButtons[index][spellIndex]:GetChecked()
+            if (isChecked) then
+                frame.CheckButtons[index][spellIndex]:SetChecked(true)
+                SetShouldShowProf(charName, spellName, "y")
+            else
+                frame.CheckButtons[index][spellIndex]:SetChecked(nil)
+                SetShouldShowProf(charName, spellName, "n")
+            end
+            if spellIndex == 1 then HandleGlobalCharacterClick(charName, isChecked)
+            else HandleSpecificClick(charName, spellName, isChecked) end
+
+            logIfLevel(2, "index: " .. index .. ", char: " .. charName .. ", spell: " .. spellName .. " sindex: " .. spellIndex)
+            UpdateAndRepaintIfOpen()
+        end)
+end
+
+function HandleSpecificClick(charName, spellName, shouldCheck)
+    local charIndex = pcdFiltersFrame.CharIndices[charName]
+    pcdFiltersFrame.CheckButtons[charIndex][1]:SetAlpha(0.4)
+    pcdFiltersFrame.CheckButtons[charIndex][1]:SetChecked(nil)
+    pcdFiltersFrame.CheckButtons[1][GetSpellIndex(spellName)]:SetAlpha(0.4)
+    pcdFiltersFrame.CheckButtons[1][GetSpellIndex(spellName)]:SetChecked(nil)
+    logIfLevel(2, "should be alpha'ed now (")
+    PcdDb[charName]["filters"]["Global"] = "x"
+    PcdDb["settings"]["filters"][spellName] = "x"
+    for i = 2, #pcdFiltersFrame.CheckButtons[charIndex] do
+        local button = pcdFiltersFrame.CheckButtons[charIndex][i]
+        button:SetAlpha(1)
+    end
+    for i = 2, #pcdFiltersFrame.CheckButtons do
+        local button = pcdFiltersFrame.CheckButtons[i][GetSpellIndex(spellName)]
+        button:SetAlpha(1)
+    end
+
+end
+
+function HandleGlobalCdClick(cdName, shouldCheck)
+    local spellIndex = GetSpellIndex(cdName)
+    pcdFiltersFrame.CheckButtons[1][spellIndex]:SetAlpha(1)
+    local targetValue
+    local checkedValue
+    for i = 2, #pcdFiltersFrame.CheckButtons do
+        local button = pcdFiltersFrame.CheckButtons[i][spellIndex]
+        button:SetAlpha(0.4)
+    end
+end
+
+function HandleGlobalCharacterClick(charName, shouldCheck)
+    local charIndex = pcdFiltersFrame.CharIndices[charName]
+    local targetValue
+    local checkedValue
+    if shouldCheck then targetValue = "y" else targetValue = "n" end
+    if shouldCheck then checkedValue = true else checkedValue = nil end
+    pcdFiltersFrame.CheckButtons[charIndex][1]:SetAlpha(1)
+    PcdDb[charName]["filters"]["Global"] = targetValue
+    for i = 2, #pcdFiltersFrame.CheckButtons[charIndex] do
+        local button = pcdFiltersFrame.CheckButtons[charIndex][i]
+        -- button:SetChecked(checkedValue)
+        button:SetAlpha(0.4)
+    end
+end
+
+function InitAlphas()
+    -- character globals
+    local chars = GetAllChars(true)
+    for charName, charData in pairs(chars) do
+        local charIndex = pcdFiltersFrame.CharIndices[charName]
+        local alphaValue
+        local button = pcdFiltersFrame.CheckButtons[charIndex][1]
+        if PcdDb[charName]["filters"]["Global"] == "x" then alphaValue = 0.4 else alphaValue = 1 end
+        button:SetAlpha(alphaValue)
+        if alphaValue == 1 then
+            for i = 2, #pcdFiltersFrame.CheckButtons do
+                logIfLevel(3, "set " .. i .. ", " .. 1 .. " alpha for char globals to 0.4" .. alphaValue)
+                button = pcdFiltersFrame.CheckButtons[i][1]
+                button:SetAlpha(0.4)
+            end
+        end
+    end
+    -- cooldown globals
+    for spellIndex = 2, 6 do
+        local alphaValue
+        local spellName = GetSpellNameFromIndex(spellIndex)
+        if PcdDb["settings"]["filters"][spellName] == "x" then alphaValue = 0.4 else alphaValue = 1 end
+        logIfLevel(1, "alpha is " .. alphaValue .. " for " .. spellName .. " with index " .. spellIndex)
+        pcdFiltersFrame.CheckButtons[1][spellIndex]:SetAlpha(alphaValue)
+        if alphaValue == 1 then
+            for charIndex = 2, #pcdFiltersFrame.CheckButtons do
+                logIfLevel(1, "set " .. charIndex .. ", " .. spellIndex .. " alpha for cd globals")
+                local button = pcdFiltersFrame.CheckButtons[charIndex][spellIndex]
+                button:SetAlpha(0.4)
+            end
+        end
+    end
+end
+
+function SetShouldShowGlobal(spellName, shouldShow)
+    PcdDb["settings"]["filters"][spellName] = shouldShow
+end
+
+function SetShouldShowProf(charName, spellName, shouldShow)
+    PcdDb[charName]["filters"][spellName] = shouldShow
+    PcdDb[charName]["filters"]["Global"] = "x"
+    PcdDb["settings"]["filters"][spellName] = "x"
+end
+
+function ShouldShowProf(charName, spellName)
+    local globalVal = PcdDb["settings"]["filters"][spellName]
+    local charGlobalVal = PcdDb[charName]["filters"]["Global"]
+    local specificVal = PcdDb[charName]["filters"][spellName]
+
+    if (globalVal == "y" or charGlobalVal == "y") then return true
+    elseif globalVal == "n" or charGlobalVal == "n" then return false
+    else return specificVal == "y" end
 end
 
 -- /script ClearFontStrings(pcdFrame)
@@ -822,6 +1261,7 @@ function EnableCloseOnEscape(shouldPrint)
     end
     tinsert(UISpecialFrames, pcdFrame:GetName())
     tinsert(UISpecialFrames, pcdOptionsFrame:GetName())
+    tinsert(UISpecialFrames, pcdFiltersFrame:GetName())
 end
 
 function EnableUpdateFromSpellId(shouldPrint)
@@ -887,6 +1327,7 @@ function PrintHelp()
     print("Drag the window to change its position. Close it by clicking 'X' button or press the Escape key")
     print ("/pcd update, triggers a manual update from spell id. This feature is still in development.")
     print("Type /pcd options to open options menu.")
+    print("Type /pcd filters to set up filters")
 end
 
 function StartsWith(msg, pattern)
@@ -1042,7 +1483,12 @@ function AddCooldownsToTooltip(tooltip)
             local line = sortedProfData[i]
 
             local cooldownText = GetCooldownText(line[3])
-            tooltip:AddDoubleLine(line[1].." - " .. line[2], "" .. cooldownText.text, 1, 1, 1, cooldownText.color[1], cooldownText.color[2], cooldownText.color[3])
+            if ShouldShowProf(line[1], line[2]) then
+                local cColorString = GetClassColorString(line[1])
+                tooltip:AddDoubleLine(cColorString .. line[1] .. STD_WHITE .. " - " .. line[2], "" .. cooldownText.text, 1, 1, 1, cooldownText.color[1], cooldownText.color[2], cooldownText.color[3])
+            else
+                logIfLevel(1, "skipped " .. line[1] .. " - " .. line[2])
+            end
         end
     end
 end
@@ -1077,10 +1523,13 @@ end
 SLASH_PCD1 = "/pcd"
 SlashCmdList["PCD"] = function(msg)
     if msg == "update" then
-        GetCooldownsFromSpellIds()
+        UpdateCds()
+        -- GetCooldownsFromSpellIds()
         if pcdFrame and pcdFrame:IsShown() then
             CreatePCDFrame()
         end
+    elseif msg == "filters" then
+        CreatePcdFiltersFrame()
     elseif msg == nil or msg == "" then
         UpdateDataFormatVersion()
         if pcdFrame and pcdFrame:IsShown() then
