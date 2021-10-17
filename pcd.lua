@@ -1,6 +1,5 @@
 -- PCD start
 local pcdVersion = "1.13"
-pcdUpdateFromSpellId = nil
 pcdShowMinimapButton = nil
 local pcdIsLoaded = nil
 
@@ -31,10 +30,6 @@ profCdTrackerFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         pcdIsLoaded = true
         InitDbTable()
         LoadPcdSettings()
-        if PcdDb and PcdDb["settings"] and not (PcdDb["settings"]["UpdateFromSpellId"] == "n") then
-            pcdUpdateFromSpellId = true
-            logIfLevel(2, "update from spell id set to true")
-        end
         if PcdDb and PcdDb["settings"] and not (PcdDb["settings"]["ShowMinimapButton"] == "n") then
             pcdShowMinimapButton = true
             logIfLevel(2, "show mini map button set to true")
@@ -59,11 +54,7 @@ end
 function UpdateCds()
     logIfLevel(2, "Called update cds")
     InitDbTable()
-    if not pcdUpdateFromSpellId then
-        GetProfessionCooldowns()
-    else
-        GetCooldownsFromSpellIds()
-    end
+    GetCooldownsFromSpellIds()
 end
 
 local lootMsgFrame = CreateFrame("Frame")
@@ -141,42 +132,6 @@ function logIfLevel(dbLevel, text)
     end
 end
 
-local lastcalled = nil
-function internalGetProfessionCooldowns()
-    if lastcalled and GetServerTime() - lastcalled < 1 then
-        logIfLevel (1, "SKIP internalGetProfCd cause called too early. diff only: " .. (GetServerTime() - lastcalled))
-        return
-    else
-        lastcalled = GetServerTime()
-    end
-    local charName = UnitName("player")
-    logIfLevel(1, "getting prof cd for " .. charName)
-    for i = 1, GetNumTradeSkills() do
-        local secondsLeft = GetTradeSkillCooldown(i);
-        if (secondsLeft and secondsLeft > 60) then
-            local skillName = GetTradeSkillInfo(i);
-            if (skillName) then
-                local professionGuess = getProfessionName(skillName)
-                if not professionGuess then
-                    logIfLevel (3, "PCD Error: Uknown profession skill found, with name: " .. skillName)
-                    return
-                end
-                logIfLevel (1, "prof guess : " .. professionGuess)
-                initProfessionIfNeeded(professionGuess)
-                local hoursLeft = secondsLeft / 3600
-                local doneAt = GetServerTime() + secondsLeft
-                logIfLevel (1, "calculate done at as: " .. (doneAt / 3600000))
-                logIfLevel (1, "hours left is " .. hoursLeft)
-                if (IsVanillaTransmute(skillName) or IsTransmuteTBC(skillName)) then
-                    skillName = "Transmute"
-                end
-                PcdDb[charName]["professions"][professionGuess]["cooldowns"][skillName] = doneAt
-                logIfLevel(2, "saved " .. skillName .. ": " .. string.format("%.2f", hoursLeft) .. " from now.")
-            end
-        end
-    end
-end
-
 function UpdateTo0103()
     if PcdDb and PcdDb["settings"] and not PcdDb["settings"]["version"] then
         for charName, profs in pairs(PcdDb) do
@@ -247,12 +202,6 @@ function RenameCdInDb(prof, prevName, updatedName)
             end
         end
     end
-end
-
-function GetProfessionCooldowns()
-    InitDbTable()
-    internalGetProfessionCooldowns()
-    UpdateSaltShakerCd()
 end
 
 function UpdateSaltShakerCd()
@@ -328,9 +277,6 @@ local allTransmuteIds = {
 function GetCooldownsFromSpellIds()
     logIfLevel(2, "updating from spell id")
     logIfLevel(1, GetTime())
-    if not pcdUpdateFromSpellId then
-        logIfLevel (2, "update from spell id called, but is disabled.")
-    end
     InitDbTable()
     local charName = UnitName("Player")
     if PcdDb and PcdDb[charName] and PcdDb[charName]["professions"] then
@@ -549,9 +495,6 @@ function InitDbTable()
     if (not PcdDb["settings"]["CloseOnEscape"]) then
         PcdDb["settings"]["CloseOnEscape"] = "y"
     end
-    if (not PcdDb["settings"]["UpdateFromSpellId"]) then
-        PcdDb["settings"]["UpdateFromSpellId"] = "y"
-    end
     if (not PcdDb["settings"]["ClassColors"]) then
         PcdDb["settings"]["ClassColors"] = "y"
     end
@@ -585,8 +528,6 @@ function RegisterFrameForDrag(theFrame, savePos)
     end
     theFrame:SetScript("OnDragStop", theFrame.StopMovingFunc)
 end
-
-
 
 function SavePositionAndStopMoving(self)
     self:StopMovingOrSizing()
@@ -697,9 +638,6 @@ function CreatePcdOptionsFrame()
         if PcdDb["settings"]["CloseOnEscape"] == "y" then
             EnableCloseOnEscape(false)
         end
-        if PcdDb["settings"]["UpdateFromSpellId"] == "y" then
-            EnableUpdateFromSpellId(false)
-        end
         if PcdDb["settings"]["ShowMinimapButton"] == "y" then
             EnableMinimapButton(false)
         end
@@ -710,12 +648,6 @@ function CreatePcdOptionsFrame()
     end
     if not (pcdOptionsFrame.CloseOnEscapeText) then
         pcdOptionsFrame.CloseOnEscapeText = pcdOptionsFrame:CreateFontString(nil, "OVERLAY")
-    end
-    if not (pcdOptionsFrame.UpdateFromSpellId) then
-        pcdOptionsFrame.UpdateFromSpellId = CreateFrame("CheckButton", "UpdateFromSpellId_CheckButton", pcdOptionsFrame, "UICheckButtonTemplate")
-    end
-    if not (pcdOptionsFrame.UpdateFromSpellIdText) then
-        pcdOptionsFrame.UpdateFromSpellIdText = pcdOptionsFrame:CreateFontString(nil, "OVERLAY")
     end
     if not (pcdOptionsFrame.ShowMinimapButton) then
         pcdOptionsFrame.ShowMinimapButton = CreateFrame("CheckButton", "UpdateMiniMap_CheckButton", pcdOptionsFrame, "UICheckButtonTemplate")
@@ -729,13 +661,8 @@ function CreatePcdOptionsFrame()
     pcdOptionsFrame.CloseOnEscapeText:SetText("Close on escape (disable requires reload)")
     pcdOptionsFrame.CloseOnEscapeText:SetFont("Fonts\\FRIZQT__.ttf", 11, "OUTLINE")
 
-    pcdOptionsFrame.UpdateFromSpellIdText:SetFontObject("GameFontHighlight")
-    pcdOptionsFrame.UpdateFromSpellIdText:SetPoint("TOPLEFT", 40, -60)
-    pcdOptionsFrame.UpdateFromSpellIdText:SetText("Update from spell id")
-    pcdOptionsFrame.UpdateFromSpellIdText:SetFont("Fonts\\FRIZQT__.ttf", 11, "OUTLINE")
-
     pcdOptionsFrame.ShowMinimapButtonText:SetFontObject("GameFontHighlight")
-    pcdOptionsFrame.ShowMinimapButtonText:SetPoint("TOPLEFT", 40, -80)
+    pcdOptionsFrame.ShowMinimapButtonText:SetPoint("TOPLEFT", 40, -60)
     pcdOptionsFrame.ShowMinimapButtonText:SetText("Show mini map button")
     pcdOptionsFrame.ShowMinimapButtonText:SetFont("Fonts\\FRIZQT__.ttf", 11, "OUTLINE")
     
@@ -745,18 +672,11 @@ function CreatePcdOptionsFrame()
         pcdOptionsFrame.CloseOnEscape:SetChecked(nil)
     end
 
-    if PcdDb["settings"]["UpdateFromSpellId"] == "y" then
-        pcdOptionsFrame.UpdateFromSpellId:SetChecked(PcdDb["settings"]["UpdateFromSpellId"])
-    else
-        pcdOptionsFrame.UpdateFromSpellId:SetChecked(nil)
-    end
-
     if PcdDb["settings"]["ShowMinimapButton"] == "y" then
         pcdOptionsFrame.ShowMinimapButton:SetChecked(PcdDb["settings"]["ShowMinimapButton"])
     else
         pcdOptionsFrame.ShowMinimapButton:SetChecked(nil)
     end
-
 
     pcdOptionsFrame.CloseOnEscape:SetPoint("TOPLEFT", 350, -34)
     pcdOptionsFrame.CloseOnEscape:SetScript("OnClick", 
@@ -773,20 +693,7 @@ function CreatePcdOptionsFrame()
             end
         end)
 
-    pcdOptionsFrame.UpdateFromSpellId:SetPoint("TOPLEFT", 350, -54)
-    pcdOptionsFrame.UpdateFromSpellId:SetScript("OnClick", 
-        function()
-            local isChecked = pcdOptionsFrame.UpdateFromSpellId:GetChecked()
-            if (isChecked) then
-                pcdOptionsFrame.UpdateFromSpellId:SetChecked(true)
-                EnableUpdateFromSpellId(true)
-            else
-                pcdOptionsFrame.UpdateFromSpellId:SetChecked(nil)
-                DisableUpdateFromSpellId(true)
-            end
-        end)
-
-    pcdOptionsFrame.ShowMinimapButton:SetPoint("TOPLEFT", 350, -74)
+    pcdOptionsFrame.ShowMinimapButton:SetPoint("TOPLEFT", 350, -54)
     pcdOptionsFrame.ShowMinimapButton:SetScript("OnClick",
         function()
             local isChecked = pcdOptionsFrame.ShowMinimapButton:GetChecked()
@@ -800,10 +707,8 @@ function CreatePcdOptionsFrame()
         end)
     
     pcdOptionsFrame.CloseOnEscape:Show()
-    pcdOptionsFrame.UpdateFromSpellId:Show()
     pcdOptionsFrame.ShowMinimapButton:Show()
     pcdOptionsFrame.CloseOnEscape.tooltip = "If checked, Pcd frames will close when hitting the escape key"
-    pcdOptionsFrame.UpdateFromSpellId.tooltip = "If checked, Pcd data will be updated from spell id on every profession craft."
     SetFrameTitle(pcdOptionsFrame, "PCD options")
     RegisterFrameForDrag(pcdOptionsFrame, false)
     
@@ -1269,26 +1174,6 @@ function EnableCloseOnEscape(shouldPrint)
     tinsert(UISpecialFrames, pcdFiltersFrame:GetName())
 end
 
-function EnableUpdateFromSpellId(shouldPrint)
-    pcdUpdateFromSpellId = true
-    if PcdDb["settings"] then
-        PcdDb["settings"]["UpdateFromSpellId"] = "y"
-    end
-    if shouldPrint then
-        print ('Enabled cooldown updates from spell id (BETA), updated on every craft. Can be manually called by using the "/pcd update" command.')
-    end
-end
-
-function DisableUpdateFromSpellId(shouldPrint)
-    pcdUpdateFromSpellId = nil
-    if PcdDb["settings"] then
-        PcdDb["settings"]["UpdateFromSpellId"] = "n"
-    end
-    if shouldPrint then
-        print ('Disabled cooldown updates from spell id (BETA). Can still be manually called by using "/pcd update" from macro or chat command.')
-    end
-end
-
 function DisableCloseOnEscape(shouldPrint)
     if PcdDb and PcdDb["settings"] then
         PcdDb["settings"]["CloseOnEscape"] = "n"
@@ -1330,7 +1215,7 @@ function PrintHelp()
     print("Profession Cooldown (PCD) tracks your profession cooldowns. type /pcd to toggle the main frame visibility.")
     print("Cooldowns are updated when you open or close the given profession. Cooldowns are only added to the list once they are on cooldown, but will show up after that.")
     print("Drag the window to change its position. Close it by clicking 'X' button or press the Escape key")
-    print ("/pcd update, triggers a manual update from spell id. This feature is still in development.")
+    print ("/pcd update, triggers a manual update.")
     print("Type /pcd options to open options menu.")
     print("Type /pcd filters to set up filters")
 end
