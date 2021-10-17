@@ -570,18 +570,23 @@ function InitDbTable()
     end
 end
 
-function RegisterFrameForDrag(theFrame)
+function RegisterFrameForDrag(theFrame, savePos)
     theFrame:SetMovable(true)
     theFrame:EnableMouse(true)
 
     theFrame:RegisterForDrag("LeftButton")
     theFrame:SetScript("OnDragStart", theFrame.StartMoving)
-    if (not theFrame.SavePositionAndStopMoving) then
-        theFrame.SavePositionAndStopMoving = SavePositionAndStopMoving
+    if (not theFrame.StopMovingFunc) then
+        if (savePos) then
+            theFrame.StopMovingFunc = SavePositionAndStopMoving
+        else
+            theFrame.StopMovingFunc = theFrame.StopMovingOrSizing
+        end
     end
-    theFrame:SetScript("OnDragStop", theFrame.SavePositionAndStopMoving)
-
+    theFrame:SetScript("OnDragStop", theFrame.StopMovingFunc)
 end
+
+
 
 function SavePositionAndStopMoving(self)
     self:StopMovingOrSizing()
@@ -800,7 +805,7 @@ function CreatePcdOptionsFrame()
     pcdOptionsFrame.CloseOnEscape.tooltip = "If checked, Pcd frames will close when hitting the escape key"
     pcdOptionsFrame.UpdateFromSpellId.tooltip = "If checked, Pcd data will be updated from spell id on every profession craft."
     SetFrameTitle(pcdOptionsFrame, "PCD options")
-    RegisterFrameForDrag(pcdOptionsFrame)
+    RegisterFrameForDrag(pcdOptionsFrame, false)
     
     pcdOptionsFrame:Show()
     pcdOptionsFrame:SetPoint("CENTER", UIParent, "CENTER")
@@ -830,7 +835,7 @@ function CreatePCDFrame()
         EnableCloseOnEscape(false)
     end
     SetFrameTitle(pcdFrame, "Profession CD Tracker")
-    RegisterFrameForDrag(pcdFrame)
+    RegisterFrameForDrag(pcdFrame, true)
     local charSpellAndCd = GetAllNamesAndCdsOnAccount()
     local sortedProfData = {}
     for i = 1, #charSpellAndCd do
@@ -898,7 +903,7 @@ function CreatePcdFiltersFrame()
         EnableCloseOnEscape(false)
     end
     SetFrameTitle(pcdFiltersFrame, "Profession CD Filters")
-    RegisterFrameForDrag(pcdFiltersFrame)
+    RegisterFrameForDrag(pcdFiltersFrame, false)
 
     pcdFiltersFrame:Show()
     pcdFiltersFrame:SetPoint("CENTER", UIParent, "CENTER")
