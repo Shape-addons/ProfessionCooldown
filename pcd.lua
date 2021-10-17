@@ -28,6 +28,9 @@ profCdTrackerFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         UpdateAndRepaintIfOpen()
     elseif not pcdIsLoaded and ((event == "ADDON_LOADED" and arg1 == "ProfessionCooldown") or event == "PLAYER_LOGIN") then
         pcdIsLoaded = true
+        C_Timer.After(5, function()
+            print ('PCD v1.13: Try out the new filtering option using /pcd filters')
+        end)
         InitDbTable()
         LoadPcdSettings()
         if PcdDb and PcdDb["settings"] and not (PcdDb["settings"]["ShowMinimapButton"] == "n") then

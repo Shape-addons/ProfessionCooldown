@@ -11,6 +11,7 @@ Your profession window has to be open, in order to record active cooldowns. Curr
 ## Commands:
 
 - /pcd - toggles the visibility of the window.
+- /pcd filters - opens the filtering menu.
 - /pcd reset - resets the position of the window.
 - /pcd resetalldata - resets all data for the addon.
 - /pcd reset charactername - resets the data for the given charactername. Useful if changing professions or deleting a character.
@@ -21,8 +22,6 @@ Your profession window has to be open, in order to record active cooldowns. Curr
 Please leave any feedback you may have in the comments. You are also welcome to create issues on Github.
 
 ## To do list: Currently no ETA.
-- Locale issue fix.
-- Filtering for cooldowns.
 - Data broker / titan panel improvements. (color coding)
 - Cross-account sync.
 - Alerts / notifications.
