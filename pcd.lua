@@ -1,5 +1,5 @@
 -- PCD start
-local pcdVersion = "1.13"
+local pcdVersion = "1.14"
 pcdShowMinimapButton = nil
 local pcdIsLoaded = nil
 
@@ -780,6 +780,7 @@ function CreatePcdFiltersFrame()
     -- char
     pcdFiltersFrame:ClearAllPoints()
     pcdFiltersFrame:Hide()
+    InitDbTable()
     if not pcdFiltersFrame.close then
         pcdFiltersFrame.close = CreateFrame("Button", "$parentClose", pcdFiltersFrame, "UIPanelCloseButton")
     end
@@ -1030,6 +1031,8 @@ function CreateCheckButtonForCharacterFilter(index, frame, charName, spellName, 
     if spellIndex > 1 and not (CharacterHasCooldownWithName(charName, spellName)) then
         frame.CheckButtons[index][spellIndex]:Disable()
         logIfLevel(1, charName .. " does not have " .. spellName .. " so disabling: [" .. index .. "][" .. spellIndex .. "]")
+    elseif spellIndex > 1 then
+        frame.CheckButtons[index][spellIndex]:Enable()
     end
     frame.CheckButtons[index][spellIndex]:SetScript("OnClick", 
         function()
@@ -1422,6 +1425,7 @@ SlashCmdList["PCD"] = function(msg)
             CreatePCDFrame()
         end
     elseif msg == "filters" then
+        UpdateCds()
         CreatePcdFiltersFrame()
     elseif msg == nil or msg == "" then
         UpdateDataFormatVersion()
