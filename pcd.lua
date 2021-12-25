@@ -1,5 +1,5 @@
 -- PCD start
-local pcdVersion = "1.14"
+local pcdVersion = "1.15"
 pcdShowMinimapButton = nil
 local pcdIsLoaded = nil
 
@@ -23,14 +23,12 @@ profCdTrackerFrame:RegisterEvent("TRADE_SKILL_SHOW")
 profCdTrackerFrame:RegisterEvent("TRADE_SKILL_UPDATE")
 profCdTrackerFrame:RegisterEvent("TRADE_SKILL_CLOSE")
 profCdTrackerFrame:RegisterEvent("ADDON_LOADED")
+
 profCdTrackerFrame:SetScript("OnEvent", function(self, event, arg1, ...)
     if (event == "TRADE_SKILL_SHOW" or event == "TRADE_SKILL_UPDATE" or event == "TRADE_SKILL_CLOSE") then
         UpdateAndRepaintIfOpen()
     elseif not pcdIsLoaded and ((event == "ADDON_LOADED" and arg1 == "ProfessionCooldown") or event == "PLAYER_LOGIN") then
         pcdIsLoaded = true
-        C_Timer.After(5, function()
-            print ('PCD v1.13: Try out the new filtering option using /pcd filters')
-        end)
         InitDbTable()
         LoadPcdSettings()
         if PcdDb and PcdDb["settings"] and not (PcdDb["settings"]["ShowMinimapButton"] == "n") then
@@ -87,7 +85,8 @@ local profNamesToConsider = {
     ["Alchemy"] = true,
     ["Tailoring"] = true,
     ["Leatherworking"] = true,
-    ["Jewelcrafting"] = true
+    ["Jewelcrafting"] = true,
+    ["Enchanting"] = true
 }
 
 local cdNamesToConsider = {
@@ -95,7 +94,8 @@ local cdNamesToConsider = {
     ["Spellcloth"] = true,
     ["Shadowcloth"] = true,
     ["Brilliant Glass"] = true,
-    ["Transmute"] = true    
+    ["Transmute"] = true,
+    ["Void Sphere"] = true
 }
 
 local STD_WHITE = "|cffffffff"
@@ -247,6 +247,7 @@ local primalMoonclothId = 26751
 local spellclothId = 31373
 local shadowclothId = 36686
 local brilliantGlassId = 47280
+local voidSphereId = 28028
 local allTransmuteIds = {
     17560, -- Fire to Earth
     11479, -- Iron to Gold
@@ -305,6 +306,12 @@ function GetCooldownsFromSpellIds()
             logIfLevel(1, "Jewelcrafting found")
             if PcdDb[charName]["professions"]["Jewelcrafting"]["skill"] >= 350 then
                 SetCooldownForSpell("Brilliant Glass", "Jewelcrafting", brilliantGlassId)
+            end
+        end
+        if PcdDb[charName]["professions"]["Enchanting"] then
+            logIfLevel(1, "Enchanting found")
+            if PcdDb[charName]["professions"]["Enchanting"]["skill"] >= 350 then
+                SetCooldownForSpell("Void Sphere", "Enchanting", voidSphereId)
             end
         end
     end
@@ -819,6 +826,7 @@ function CreatePcdFiltersFrame()
     pcdFiltersFrame:SetSize(400, 20 + heightMod * 30)
 end
 
+local numberCdsImplemented = 7
 function GetSpellIndex(cdName)
     if cdName == "Global"           then return 1 end
     if cdName == "Transmute"        then return 2 end
@@ -826,6 +834,7 @@ function GetSpellIndex(cdName)
     if cdName == "Spellcloth"       then return 4 end
     if cdName == "Primal Mooncloth" then return 5 end
     if cdName == "Shadowcloth"      then return 6 end
+    if cdName == "Void Sphere"      then return 7 end
     return -1
 end
 
@@ -836,6 +845,7 @@ function GetSpellNameFromIndex(index)
     if index == 4 then return "Spellcloth" end
     if index == 5 then return "Primal Mooncloth" end
     if index == 6 then return "Shadowcloth" end
+    if index == 7 then return "Void Sphere" end
     return "Unknown"
 end
 
@@ -846,6 +856,7 @@ function AddFiltersHeader(frame)
     frame.Header[4] = AddIconToFiltersFrame(220, 24271) -- spellcloth
     frame.Header[5] = AddIconToFiltersFrame(250, 21845) -- primal mooncloth
     frame.Header[6] = AddIconToFiltersFrame(280, 24272) -- shadowcloth
+    frame.Header[7] = AddIconToFiltersFrame(310, 22459) -- void sphere
 end
 
 function AddIconToFiltersFrame(posX, itemId)
@@ -872,7 +883,7 @@ function addPcdFilterData()
     for charName, charData in pairs(chars) do
         pcdFiltersFrame.CharIndices[charName] = counter
         CreateNameTextForFilter(counter, pcdFiltersFrame, charName)
-        for i = 1, 6 do
+        for i = 1, numberCdsImplemented do
             CreateCheckButtonForCharacterFilter(counter, pcdFiltersFrame, charName, GetSpellNameFromIndex(i), i)
         end
         counter = counter + 1
@@ -983,8 +994,9 @@ function CharacterHasProfessionsCooldowns(charName)
     if IsNotNullTable(charData) then
         for profName, cds in pairs(charData) do
             local cdTable = PcdDb[charName]["professions"][profName]["cooldowns"]
+            if not cdTable then PcdDb[charName]["professions"][profName]["cooldowns"] = {} end
             for cdName, x in pairs(cdNamesToConsider) do
-                if cdTable[cdName] then
+                if PcdDb[charName]["professions"][profName]["cooldowns"][cdName] then
                     return true
                 end
             end
@@ -1116,7 +1128,7 @@ function InitAlphas()
         end
     end
     -- cooldown globals
-    for spellIndex = 2, 6 do
+    for spellIndex = 2, numberCdsImplemented do
         local alphaValue
         local spellName = GetSpellNameFromIndex(spellIndex)
         if PcdDb["settings"]["filters"][spellName] == "x" then alphaValue = 0.4 else alphaValue = 1 end
