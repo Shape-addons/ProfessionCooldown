@@ -4,10 +4,12 @@ By default, the addon will only track a given profession cooldown when the abili
 Your profession window has to be open, in order to record active cooldowns. Currently it tracks:
 
 - Leatherworking: Salt shaker.
-- Alchemy: All transmutes
-- Jewelcrafting: Brilliant Glass
-- Tailoring: TBC cloths
+- Alchemy: All transmutes, Northrend Research
+- Jewelcrafting: Brilliant Glass, Icy Prism
+- Tailoring: TBC cloths, WotLK cloths, Glacial Bag
 - Enchanting: Void Sphere
+- Mining: Smelt Titansteel
+- Inscription: Minor research, Northrend research
 
 ## Commands:
 

@@ -1,5 +1,5 @@
 -- PCD start
-local pcdVersion = "1.15"
+local pcdVersion = "1.16"
 pcdShowMinimapButton = nil
 local pcdIsLoaded = nil
 
@@ -77,6 +77,10 @@ function getProfessionName(abilityName)
         return "Tailoring"
     elseif string.find(abilityName, "Brilliant Glass") then
         return "Jewelcrafting"
+    elseif string.find(abilityName, "Inscription Research") then
+        return "Inscription"
+    elseif string.find(abilityName, "Smelt Titansteel") then
+        return "Mining"
     end
     return nil
 end
@@ -86,7 +90,9 @@ local profNamesToConsider = {
     ["Tailoring"] = true,
     ["Leatherworking"] = true,
     ["Jewelcrafting"] = true,
-    ["Enchanting"] = true
+    ["Enchanting"] = true,
+    ["Inscription"] = true,
+    ["Mining"] = true,
 }
 
 local cdNamesToConsider = {
@@ -95,7 +101,16 @@ local cdNamesToConsider = {
     ["Shadowcloth"] = true,
     ["Brilliant Glass"] = true,
     ["Transmute"] = true,
-    ["Void Sphere"] = true
+    ["Void Sphere"] = true,
+    ["Minor Inscription Research"] = true,
+    ["Northrend Inscription Research"] = true,
+    ["Smelt Titansteel"] = true,
+    ["Icy Prism"] = true,
+    ["Moonshroud"] = true,
+    ["Ebonweave"] = true,
+    ["Spellweave"] = true,
+    ["Glacial Bag"] = true,
+    ["Northrend Alchemy Research"] = true,
 }
 
 local STD_WHITE = "|cffffffff"
@@ -105,11 +120,14 @@ local classColors = {
     [3] = "|cffaad372",  -- hunter
     [4] = "|cfffff468",  -- rogue
     [5] = "|cffffffff",  -- priest
+    [6] = "|cffc41e3a", -- death knight
     [7] = "|cff0070DD", -- shaman
     [8] = "|cff3fc7eb",  -- mage
     [9] = "|cff8788ee", -- lock
+    -- [10] = "|cff00ff98", -- monk
     [11] = "|cffff7c0a" -- druid
     -- [11] = "|cff7c0aff" -- druid
+    -- [12] = "|cffa330c9" -- demon hunter
 }
 
 function initProfessionIfNeeded(profName)
@@ -272,10 +290,40 @@ local allTransmuteIds = {
     29688, -- Primal Might
     32765, -- Earthstorm Diamond
     32766, -- Skyfire Diamond
+    60350, -- Titanium
+    53784, -- Eternal Water to Fire
+    53783, -- Eternal Water to Air
+    53782, -- Eternal Earth to Shadow
+    53781, -- Eternal Earth to Air
+    53780, -- Eternal Shadow to Life
+    53779, -- Eternal Shadow to Earth
+    53777, -- Eternal Air to Earth
+    53776, -- Eternal Air to Water
+    53775, -- Eternal Fire to Life
+    53774, -- Eternal Fire to Water
+    53773, -- Eternal Life to Fire
+    53771, -- Eternal Life to Shadow
+    57427, -- Earthsiege Diamond
+    57425, -- Skyflare Diamond
+    66659, -- Cardinal Ruby
+    66664, -- Eye of Zul
+    66663, -- Majestic Zircon
+    66662, -- Dreadstone
+    66660, -- King's Amber
+    66658, -- Ametrine
 -- Below has no cd.
 --    17187, -- Arcanite
 --    25146, -- Elemental Fire
 }
+local minorInscriptionId = 61288
+local northrendInscriptionId = 61177
+local northrendAlchemyId = 60893
+local titanSteelId = 55208
+local icyPrismId = 62242
+local moonshroudId = 56001
+local spellweaveId = 56003
+local ebonweaveId = 56002
+local glacialBagId = 56005
 
 -- /script GetCooldownsFromSpellIds()
 function GetCooldownsFromSpellIds()
@@ -293,6 +341,9 @@ function GetCooldownsFromSpellIds()
                 end
                 logIfLevel(2, "highest transmute cd: " .. highestTransmuteCd)
             end
+            if PcdDb[charName]["professions"]["Alchemy"]["skill"] >= 400 then
+                SetCooldownForSpell("Northrend Alchemy Research", "Alchemy", northrendAlchemyId)
+            end
         end
         if PcdDb[charName]["professions"]["Tailoring"] then
             logIfLevel(1, "Tailoring found")
@@ -301,17 +352,43 @@ function GetCooldownsFromSpellIds()
                 SetCooldownForSpell("Spellcloth", "Tailoring", spellclothId)
                 SetCooldownForSpell("Shadowcloth", "Tailoring", shadowclothId)
             end
+            if PcdDb[charName]["professions"]["Tailoring"]["skill"] >= 415 then
+                SetCooldownForSpell("Moonshroud", "Tailoring", moonshroudId)
+                SetCooldownForSpell("Spellweave", "Tailoring", spellweaveId)
+                SetCooldownForSpell("Ebonweave", "Tailoring", ebonweaveId)
+            end
+            if PcdDb[charName]["professions"]["Tailoring"]["skill"] >= 445 then
+                SetCooldownForSpell("Glacial Bag", "Tailoring", glacialBagId)
+            end
         end
         if PcdDb[charName]["professions"]["Jewelcrafting"] then
             logIfLevel(1, "Jewelcrafting found")
             if PcdDb[charName]["professions"]["Jewelcrafting"]["skill"] >= 350 then
                 SetCooldownForSpell("Brilliant Glass", "Jewelcrafting", brilliantGlassId)
             end
+            if PcdDb[charName]["professions"]["Jewelcrafting"]["skill"] >= 425 then
+                SetCooldownForSpell("Icy Prism", "Jewelcrafting", icyPrismId)
+            end
         end
         if PcdDb[charName]["professions"]["Enchanting"] then
             logIfLevel(1, "Enchanting found")
             if PcdDb[charName]["professions"]["Enchanting"]["skill"] >= 350 then
                 SetCooldownForSpell("Void Sphere", "Enchanting", voidSphereId)
+            end
+        end
+        if PcdDb[charName]["professions"]["Inscription"] then
+            logIfLevel(1, "Inscription found")
+            if PcdDb[charName]["professions"]["Inscription"]["skill"] >= 75 then
+                SetCooldownForSpell("Minor Inscription Research", "Inscription", minorInscriptionId)
+            end
+            if PcdDb[charName]["professions"]["Inscription"]["skill"] >= 385 then
+                SetCooldownForSpell("Northrend Inscription Research", "Inscription", northrendInscriptionId)
+            end
+        end
+        if PcdDb[charName]["professions"]["Mining"] then
+            logIfLevel(1, "Mining found")
+            if PcdDb[charName]["professions"]["Mining"]["skill"] >= 450 then
+                SetCooldownForSpell("Smelt Titansteel", "Mining", titanSteelId)
             end
         end
     end
@@ -405,6 +482,30 @@ local tbcTransmuteSkillNames = {
     ["Transmute: Earthstorm Diamond"] = true,
 }
 
+local wrathTransmuteSkillNames = {
+    ["Transmute: Ametrine"] = true,
+    ["Transmute: King's Amber"] = true,
+    ["Transmute: Dreadstone"] = true,
+    ["Transmute: Majestic Zircon"] = true,
+    ["Transmute: Eye of Zul"] = true,
+    ["Transmute: Cardinal Ruby"] = true,
+    ["Transmute: Skyflare Diamond"] = true,
+    ["Transmute: Earthsiege Diamond"] = true,
+    ["Transmute: Eternal Life to Shadow"] = true,
+    ["Transmute: Eternal Life to Fire"] = true,
+    ["Transmute: Eternal Fire to Water"] = true,
+    ["Transmute: Eternal Fire to Life"] = true,
+    ["Transmute: Eternal Air to Water"] = true,
+    ["Transmute: Eternal Air to Earth"] = true,
+    ["Transmute: Eternal Shadow to Earth"] = true,
+    ["Transmute: Eternal Shadow to Life"] = true,
+    ["Transmute: Eternal Earth to Air"] = true,
+    ["Transmute: Eternal Earth to Shadow"] = true,
+    ["Transmute: Eternal Water to Air"] = true,
+    ["Transmute: Eternal Water to Fire"] = true,
+    ["Transmute: Titanium"] = true,
+}
+
 function IsVanillaTransmute(skillName)
     if GetAccountExpansionLevel() == 0 then
         return skillName and classicTransmuteSkillNames[skillName]
@@ -415,6 +516,10 @@ end
 
 function IsTransmuteTBC(skillName)
     return skillName and tbcTransmuteSkillNames[skillName]
+end
+
+function IsTransmuteWrath(skillName)
+    return skillName and wrathTransmuteSkillNames[skillName]
 end
 
 function UpdateCharacterProfessionDb()
