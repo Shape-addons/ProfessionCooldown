@@ -1,7 +1,8 @@
 -- PCD start
-local pcdVersion = "1.16"
+local pcdVersion = 116
 pcdShowMinimapButton = nil
 local pcdIsLoaded = nil
+-- local pcdShowOldCds = nil
 
 local LDB = LibStub:GetLibrary("LibDataBroker-1.1");
 local PCDLDBIcon = LibStub:GetLibrary("LibDBIcon-1.0")
@@ -73,9 +74,9 @@ end)
 function getProfessionName(abilityName)
     if string.find(abilityName, "Transmute") then
         return "Alchemy"
-    elseif string.find(abilityName, "Cloth") or string.find(abilityName, "cloth") then
+    elseif string.find(abilityName, "Cloth") or string.find(abilityName, "cloth") or string.find(abilityName, "weave") or string.find(abilityName, "shroud") then
         return "Tailoring"
-    elseif string.find(abilityName, "Brilliant Glass") then
+    elseif string.find(abilityName, "Brilliant Glass") or string.find(abilityName, "Prism") then
         return "Jewelcrafting"
     elseif string.find(abilityName, "Inscription Research") then
         return "Inscription"
@@ -95,13 +96,25 @@ local profNamesToConsider = {
     ["Mining"] = true,
 }
 
-local cdNamesToConsider = {
-    ["Primal Mooncloth"] = true,
-    ["Spellcloth"] = true,
-    ["Shadowcloth"] = true,
+local spellweaveId = 56003
+local moonshroudId = 56001
+local ebonweaveId = 56002
+local minorInscriptionResearchId = 61288
+local northrendInscriptionResearch = 61177
+local icyPrismId = 62242
+local smeltTitansteel = 55208
+
+local tbcCdNamesToConsider = {
+    -- ["Primal Mooncloth"] = true,
+    -- ["Spellcloth"] = true,
+    -- ["Shadowcloth"] = true,
+    -- ["Transmute (TBC)"] = true,
+    -- ["Transmute (Vanilla)"] = true,
     ["Brilliant Glass"] = true,
-    ["Transmute"] = true,
     ["Void Sphere"] = true,
+}
+
+local northrendCdNamesToConsider = {
     ["Minor Inscription Research"] = true,
     ["Northrend Inscription Research"] = true,
     ["Smelt Titansteel"] = true,
@@ -111,7 +124,24 @@ local cdNamesToConsider = {
     ["Spellweave"] = true,
     ["Glacial Bag"] = true,
     ["Northrend Alchemy Research"] = true,
+    ["Transmute"] = true,
+    -- ["Transmute (Wrath)"] = true,
 }
+
+function GetCdNamesToConsider()
+    -- if PcdDb["settings"]["ShowOldCds"] == "y" then
+    local concatTable = {}
+    for n,v in pairs(tbcCdNamesToConsider) do
+        concatTable[n] = v
+    end
+    for n,v in pairs(northrendCdNamesToConsider) do
+        concatTable[n] = v
+    end
+    return concatTable
+    -- else
+    --     return northrendCdNamesToConsider
+    -- end
+end
 
 local STD_WHITE = "|cffffffff"
 local classColors = {
@@ -124,10 +154,9 @@ local classColors = {
     [7] = "|cff0070DD", -- shaman
     [8] = "|cff3fc7eb",  -- mage
     [9] = "|cff8788ee", -- lock
+    [11]= "|cffff7c0a", -- druid
     -- [10] = "|cff00ff98", -- monk
-    [11] = "|cffff7c0a" -- druid
-    -- [11] = "|cff7c0aff" -- druid
-    -- [12] = "|cffa330c9" -- demon hunter
+    -- [12] = "|cffa330c9", -- demon hunter
 }
 
 function initProfessionIfNeeded(profName)
@@ -150,53 +179,6 @@ local debugLevel = 3
 function logIfLevel(dbLevel, text)
     if debugLevel <= dbLevel then
         print (text)
-    end
-end
-
-function UpdateTo0103()
-    if PcdDb and PcdDb["settings"] and not PcdDb["settings"]["version"] then
-        for charName, profs in pairs(PcdDb) do
-            if PcdDb[charName]["professions"] and PcdDb[charName]["professions"]["Alchemy"] then
-                local lastReadyAt
-                if PcdDb[charName]["professions"]["Alchemy"]["cooldowns"]["Transmute (Vanilla)"] then
-                    lastReadyAt = PcdDb[charName]["professions"]["Alchemy"]["cooldowns"]["Transmute (Vanilla)"]
-                    PcdDb[charName]["professions"]["Alchemy"]["cooldowns"]["Transmute (Vanilla)"] = nil
-                end
-                local lastReadyAtTbc
-                if PcdDb[charName]["professions"]["Alchemy"]["cooldowns"]["Transmute (TBC)"] then
-                    lastReadyAtTbc = PcdDb[charName]["professions"]["Alchemy"]["cooldowns"]["Transmute (TBC)"]
-                    PcdDb[charName]["professions"]["Alchemy"]["cooldowns"]["Transmute (TBC)"] = nil
-                    lastReadyAt = math.max(lastReadyAt, lastReadyAtTbc)
-                end
-                PcdDb[charName]["professions"]["Alchemy"]["cooldowns"]["Transmute"] = lastReadyAt
-            end 
-        end
-        PcdDb["settings"]["version"] = "1.03"
-        logIfLevel(2, "Updated PCD data to version 1.03")
-    end
-end
-
-function UpdateTo0104()
-    RemoveCdInDb("Alchemy", "Transmute: Primal Mana to fIRE")
-    RemoveCdInDb("Alchemy", "Transmute: Primal Water to Shadow")
-    RemoveCdInDb("Tailoring", "Mooncloth")
-    if PcdDb and PcdDb["settings"] and PcdDb["settings"]["version"] == "1.03" then
-        PcdDb["settings"]["version"] = "1.04"
-        logIfLevel(2, "Updated PCD data to version 1.04")
-    end
-end
-
-function UpdateTo0107()
-    if PcdDb then
-        if PcdDb and PcdDb["settings"] and PcdDb["settings"]["version"] == "1.04" then
-            for charName, profs in pairs(PcdDb) do
-                if PcdDb[charName]["professions"] and PcdDb[charName]["professions"]["Jewelcrafting"] then
-                    PcdDb[charName]["professions"]["Jewelcrafting"]["cooldowns"] = {}
-                end
-            end
-            PcdDb["settings"]["version"] = "1.07"
-        logIfLevel(2, "Updated PCD data to version 1.07")
-        end
     end
 end
 
@@ -260,12 +242,24 @@ function GetCooldownLeftOnItem(start, duration)
     return cdLeftDuration
 end
 
+-- tbc 
 local primalMightId = 29688
 local primalMoonclothId = 26751
 local spellclothId = 31373
 local shadowclothId = 36686
 local brilliantGlassId = 47280
 local voidSphereId = 28028
+
+-- wotlk - all on separate cooldowns
+local spellweaveId = 56003
+local moonshroudId = 56001
+local evonweaveId = 56002
+local minorInscriptionResearchId = 61288
+local northrendInscriptionResearch = 61177
+local icyPrismId = 62242
+local smeltTitansteel = 55208
+
+-- local allVanillaTransmuteIds = {
 local allTransmuteIds = {
     17560, -- Fire to Earth
     11479, -- Iron to Gold
@@ -277,6 +271,8 @@ local allTransmuteIds = {
     17564, -- Water to Undeath
     17565, -- Life to Earth
     17566, -- Earth to Life
+-- }
+-- local allTbcTransmuteIds = {
     28566, -- Primal Air to Fire
     28567, -- Primal Earth to Water
     28568, -- Primal Fire to Earth
@@ -290,6 +286,8 @@ local allTransmuteIds = {
     29688, -- Primal Might
     32765, -- Earthstorm Diamond
     32766, -- Skyfire Diamond
+-- }
+-- local allWrathTransmuteIds = {
     60350, -- Titanium
     53784, -- Eternal Water to Fire
     53783, -- Eternal Water to Air
@@ -303,15 +301,15 @@ local allTransmuteIds = {
     53774, -- Eternal Fire to Water
     53773, -- Eternal Life to Fire
     53771, -- Eternal Life to Shadow
-    57427, -- Earthsiege Diamond
-    57425, -- Skyflare Diamond
     66659, -- Cardinal Ruby
     66664, -- Eye of Zul
     66663, -- Majestic Zircon
     66662, -- Dreadstone
     66660, -- King's Amber
     66658, -- Ametrine
--- Below has no cd.
+    -- Below has no cd.
+--    57427, -- Earthsiege Diamond
+--    57425, -- Skyflare Diamond
 --    17187, -- Arcanite
 --    25146, -- Elemental Fire
 }
@@ -379,10 +377,10 @@ function GetCooldownsFromSpellIds()
         if PcdDb[charName]["professions"]["Inscription"] then
             logIfLevel(1, "Inscription found")
             if PcdDb[charName]["professions"]["Inscription"]["skill"] >= 75 then
-                SetCooldownForSpell("Minor Inscription Research", "Inscription", minorInscriptionId)
+                SetCooldownForSpell("Minor Inscription Research", "Inscription", minorInscriptionResearchId)
             end
             if PcdDb[charName]["professions"]["Inscription"]["skill"] >= 385 then
-                SetCooldownForSpell("Northrend Inscription Research", "Inscription", northrendInscriptionId)
+                SetCooldownForSpell("Northrend Inscription Research", "Inscription", northrendInscriptionResearch)
             end
         end
         if PcdDb[charName]["professions"]["Mining"] then
@@ -482,27 +480,32 @@ local tbcTransmuteSkillNames = {
     ["Transmute: Earthstorm Diamond"] = true,
 }
 
-local wrathTransmuteSkillNames = {
+local wotlkTransmuteSkillNames = {
+    -- gems
     ["Transmute: Ametrine"] = true,
-    ["Transmute: King's Amber"] = true,
-    ["Transmute: Dreadstone"] = true,
-    ["Transmute: Majestic Zircon"] = true,
-    ["Transmute: Eye of Zul"] = true,
     ["Transmute: Cardinal Ruby"] = true,
-    ["Transmute: Skyflare Diamond"] = true,
-    ["Transmute: Earthsiege Diamond"] = true,
-    ["Transmute: Eternal Life to Shadow"] = true,
-    ["Transmute: Eternal Life to Fire"] = true,
-    ["Transmute: Eternal Fire to Water"] = true,
-    ["Transmute: Eternal Fire to Life"] = true,
-    ["Transmute: Eternal Air to Water"] = true,
-    ["Transmute: Eternal Air to Earth"] = true,
+    ["Transmute: Dreadstone"] = true,
+    ["Transmute: Eye of Zul"] = true,
+    ["Transmute: King's Amber"] = true,
+    -- shadow
     ["Transmute: Eternal Shadow to Earth"] = true,
     ["Transmute: Eternal Shadow to Life"] = true,
-    ["Transmute: Eternal Earth to Air"] = true,
-    ["Transmute: Eternal Earth to Shadow"] = true,
+    -- air
+    ["Transmute: Eternal Air to Water"] = true,
+    ["Transmute: Eternal Air to Earth"] = true,
+    -- water
     ["Transmute: Eternal Water to Air"] = true,
     ["Transmute: Eternal Water to Fire"] = true,
+    -- fire
+    ["Transmute: Eternal Fire to Water"] = true,
+    ["Transmute: Eternal Fire to Life"] = true,
+    -- life
+    ["Transmute: Eternal Life to Shadow"] = true,
+    ["Transmute: Eternal Life to Fire"] = true,
+    -- earth
+    ["Transmute: Eternal Earth to Shadow"] = true,
+    ["Transmute: Eternal Earth to Air"] = true,
+    -- other
     ["Transmute: Titanium"] = true,
 }
 
@@ -595,6 +598,7 @@ function InitDbTable()
         else 
             InitFilterIfUndefined(dbCharName, "Global", "x")
         end
+        local cdNamesToConsider = GetCdNamesToConsider()
         for cdName in pairs(cdNamesToConsider) do
             InitFilterIfUndefined(dbCharName, cdName, initVal)
         end
@@ -616,7 +620,7 @@ function InitDbTable()
     if (not PcdDb["settings"]["filters"]) then
         PcdDb["settings"]["filters"] = {}
     end
-    for cdName in pairs(cdNamesToConsider) do
+    for cdName in pairs(GetCdNamesToConsider()) do
         InitGlobalFilterIfUndefined(cdName)
     end
     if (not PcdDb[charName]["professions"] or #PcdDb[charName]["professions"] < 2) then
@@ -721,12 +725,15 @@ function GetAllNamesAndCdsOnAccount()
     if (not allOnAccount) then
         return
     end
+    local cdNamesToConsider = GetCdNamesToConsider()
     for charName, charData in pairs(PcdDb) do
         if not (charName == "settings") and IsNotNullTable(charData) and IsNotNullTable(charData["professions"]) then
             for profName, pcdProfData in pairs(charData["professions"]) do
                 if IsNotNullTable(pcdProfData) and IsNotNullTable(pcdProfData["cooldowns"]) then
                     for spellName, doneAt in pairs(pcdProfData["cooldowns"]) do
-                        table.insert(charSpellAndCd, {charName, spellName, doneAt} )
+                        if (cdNamesToConsider[spellName]) then
+                            table.insert(charSpellAndCd, {charName, spellName, doneAt} )
+                        end
                     end
                 else
                     logIfLevel(1, "Cooldown data not found for character " .. charName)
@@ -755,6 +762,9 @@ function CreatePcdOptionsFrame()
         end
         if PcdDb["settings"]["ShowMinimapButton"] == "y" then
             EnableMinimapButton(false)
+        end
+        if PcdDb["settings"]["ShowOldCdsInFilters"] == "y" then
+            ShowOldCdsInFilters(false) 
         end
     end
 
@@ -814,9 +824,11 @@ function CreatePcdOptionsFrame()
             local isChecked = pcdOptionsFrame.ShowMinimapButton:GetChecked()
             if (isChecked) then
                 pcdOptionsFrame.ShowMinimapButton:SetChecked(true)
+                PcdDb["settings"]["ShowMinimapButton"] = "y"
                 EnableMinimapButton(true)
             else
                 pcdOptionsFrame.ShowMinimapButton:SetChecked(nil)
+                PcdDb["settings"]["ShowMinimapButton"] = "n"
                 DisableMinimapButton(true)
             end
         end)
@@ -919,6 +931,7 @@ function CreatePcdFiltersFrame()
     end
     CreateGlobalCheckButtonForCds()
     local heightMod = addPcdFilterData()
+    local widthMod = GetFilterIndexPosX(GetNumberOfActiveCds())
 
     if PcdDb and PcdDb["settings"] and PcdDb["settings"]["CloseOnEscape"] == "y" then
         EnableCloseOnEscape(false)
@@ -928,44 +941,89 @@ function CreatePcdFiltersFrame()
 
     pcdFiltersFrame:Show()
     pcdFiltersFrame:SetPoint("CENTER", UIParent, "CENTER")
-    pcdFiltersFrame:SetSize(400, 20 + heightMod * 30)
+    pcdFiltersFrame:SetSize(widthMod + 50, 20 + heightMod * 30)
 end
 
-local numberCdsImplemented = 7
+function GetNumberOfActiveCds()
+    return 13
+end
+
 function GetSpellIndex(cdName)
     if cdName == "Global"           then return 1 end
     if cdName == "Transmute"        then return 2 end
-    if cdName == "Brilliant Glass"  then return 3 end
-    if cdName == "Spellcloth"       then return 4 end
-    if cdName == "Primal Mooncloth" then return 5 end
-    if cdName == "Shadowcloth"      then return 6 end
-    if cdName == "Void Sphere"      then return 7 end
+    if cdName == "Northrend Alchemy Research" then return 3 end
+    if cdName == "Spellweave"       then return 4 end
+    if cdName == "Moonshroud"       then return 5 end
+    if cdName == "Ebonweave"        then return 6 end
+    if cdName == "Glacial Bag"      then return 7 end
+    if cdName == "Northrend Inscription Research" then return 8 end
+    if cdName == "Minor Inscription Research" then return 9 end
+    if cdName == "Icy Prism" then return 10 end
+    if cdName == "Brilliant Glass"  then return 11 end
+    if cdName == "Smelt Titansteel" then return 12 end
+    if cdName == "Void Sphere"      then return 13 end
+    return -1
+end
+
+function GetSpellIconFromName(cdName)
+    if cdName == "Transmute"        then return 23571 end -- primal might
+    if cdName == "Northrend Alchemy Research" then return 7810 end
+    if cdName == "Spellweave"       then return 41595 end
+    if cdName == "Moonshroud"       then return 41594 end
+    if cdName == "Ebonweave"        then return 41593 end
+    if cdName == "Glacial Bag"      then return 41600 end
+    if cdName == "Northrend Inscription Research" then return 43127 end -- snowfall ink
+    if cdName == "Minor Inscription Research" then return 39469 end -- moonglow ink
+    if cdName == "Icy Prism" then return 44943 end
+    if cdName == "Smelt Titansteel" then return 37663 end
+    if cdName == "Brilliant Glass"  then return 35945 end
+    if cdName == "Void Sphere"      then return 22459 end
     return -1
 end
 
 function GetSpellNameFromIndex(index)
     if index == 1 then return "Global" end
     if index == 2 then return "Transmute" end
-    if index == 3 then return "Brilliant Glass" end
-    if index == 4 then return "Spellcloth" end
-    if index == 5 then return "Primal Mooncloth" end
-    if index == 6 then return "Shadowcloth" end
-    if index == 7 then return "Void Sphere" end
+    if index == 3 then return "Northrend Alchemy Research" end
+    if index == 4 then return "Spellweave" end
+    if index == 5 then return "Moonshroud" end
+    if index == 6 then return "Ebonweave" end
+    if index == 7 then return "Glacial Bag" end
+    if index == 8 then return "Northrend Inscription Research" end
+    if index == 9 then return "Minor Inscription Research" end
+    if index == 10 then return "Icy Prism" end
+    if index == 11 then return "Brilliant Glass" end
+    if index == 12 then return "Smelt Titansteel" end
+    if index == 13 then return "Void Sphere" end
     return "Unknown"
 end
 
-function AddFiltersHeader(frame)
-    frame.Header[1] = AddTextToFrame(frame, "Global", "TOPLEFT", 110, -50)
-    frame.Header[2] = AddIconToFiltersFrame(160, 23571) -- primal might
-    frame.Header[3] = AddIconToFiltersFrame(190, 35945) -- brilliant glass
-    frame.Header[4] = AddIconToFiltersFrame(220, 24271) -- spellcloth
-    frame.Header[5] = AddIconToFiltersFrame(250, 21845) -- primal mooncloth
-    frame.Header[6] = AddIconToFiltersFrame(280, 24272) -- shadowcloth
-    frame.Header[7] = AddIconToFiltersFrame(310, 22459) -- void sphere
+function addHeader(index, frame)
+    local name = GetSpellNameFromIndex(index)
+    local icon = GetSpellIconFromName(name)
+    frame.Header[index] = AddIconToFiltersFrame(index, icon)
 end
 
-function AddIconToFiltersFrame(posX, itemId)
-    return AddIconToFrame(pcdFiltersFrame, "TOPLEFT", posX, -50, 20, 20, GetItemIcon(itemId))
+function AddFiltersHeader(frame)
+    local filterIndex = 1
+    -- TODO: FIX!
+    frame.Header[GetSpellIndex("Global")] = AddTextToFrame(frame, "Global", "TOPLEFT", 110, -60);
+    local numItems = GetNumberOfActiveCds()
+    for i = 2, numItems do
+        addHeader(i, frame)
+    end
+end
+
+function GetFilterIndexPosX(index)
+    if index == 1 then return 110 end
+    if index == 2 then return 170 end
+    -- prev max: 310
+    return (index - 2) * 35 + 170
+end
+
+function AddIconToFiltersFrame(index, itemId)
+    local posX = GetFilterIndexPosX(index)
+    return AddIconToFrame(pcdFiltersFrame, "TOPLEFT", posX, -50, 30, 30, GetItemIcon(itemId))
 end
 
 function AddIconToFrame(frame, pos, posX, posY, width, height, icon) 
@@ -980,36 +1038,19 @@ end
 function addPcdFilterData()
     pcdFiltersFrame.CharIndices = {
         ["Global"] = 1,
-        -- ["Shapeshiftt"] = 2,
-        -- ["Dotshift"] = 3
     }
     local chars = GetAllChars(true)
     local counter = 2
     for charName, charData in pairs(chars) do
         pcdFiltersFrame.CharIndices[charName] = counter
         CreateNameTextForFilter(counter, pcdFiltersFrame, charName)
-        for i = 1, numberCdsImplemented do
+        for i = 1, GetNumberOfActiveCds() do
             CreateCheckButtonForCharacterFilter(counter, pcdFiltersFrame, charName, GetSpellNameFromIndex(i), i)
         end
         counter = counter + 1
     end
     InitAlphas()
     return counter
-    -- CreateNameTextForFilter(2, pcdFiltersFrame, "Shapeshiftt")
-    -- CreateCheckButtonForCharacterFilter(2, pcdFiltersFrame, "Shapeshiftt", "Global", 1)
-    -- CreateCheckButtonForCharacterFilter(2, pcdFiltersFrame, "Shapeshiftt", "Transmute", 2)
-    -- CreateCheckButtonForCharacterFilter(2, pcdFiltersFrame, "Shapeshiftt", "Brilliant Glass", 3)
-    -- CreateCheckButtonForCharacterFilter(2, pcdFiltersFrame, "Shapeshiftt", "Spellcloth", 4)
-    -- CreateCheckButtonForCharacterFilter(2, pcdFiltersFrame, "Shapeshiftt", "Primal Mooncloth", 5)
-    -- CreateCheckButtonForCharacterFilter(2, pcdFiltersFrame, "Shapeshiftt", "Shadowcloth", 6)
-
-    -- CreateNameTextForFilter(3, pcdFiltersFrame, "Dotshift")
-    -- CreateCheckButtonForCharacterFilter(3, pcdFiltersFrame, "Dotshift", "Global", 1)
-    -- CreateCheckButtonForCharacterFilter(3, pcdFiltersFrame, "Dotshift", "Transmute", 2)
-    -- CreateCheckButtonForCharacterFilter(3, pcdFiltersFrame, "Dotshift", "Brilliant Glass", 3)
-    -- CreateCheckButtonForCharacterFilter(3, pcdFiltersFrame, "Dotshift", "Spellcloth", 4)
-    -- CreateCheckButtonForCharacterFilter(3, pcdFiltersFrame, "Dotshift", "Primal Mooncloth", 5)
-    -- CreateCheckButtonForCharacterFilter(3, pcdFiltersFrame, "Dotshift", "Shadowcloth", 6)
 end
 
 function GetClassColorString(charName)
@@ -1038,7 +1079,7 @@ end
 
 function CreateGlobalCheckButtonForCds()
     CreateNameTextForFilter(1, pcdFiltersFrame, "Global")
-    for cdName in pairs(cdNamesToConsider) do
+    for cdName in pairs(GetCdNamesToConsider()) do
         local checkedValue = "x"
         if PcdDb["settings"]["filters"][cdName] == "y" then checkedValue = "y" else checkedValue = nil end
         local spellIndex = GetSpellIndex(cdName)
@@ -1060,30 +1101,14 @@ function CreateGlobalCheckButtonForCds()
     end
 end
 
--- function CreateGlobalCheckButtonForCharacters(cdOrCharacter)
---     local index = 1
---     if not frame.CheckButtons[index] then
---         frame.CheckButtons[index] = {}
---     end
---     if not frame.CheckButtons[index][1] then
---         frame.CheckButtons[index][1] = CreateFrame("CheckButton", "Filter_GlobalCheckButton_" .. index .. "_" .. 1, pcdFiltersFrame, "UICheckButtonTemplate")
---     end
-
---     local charsWithProfessions = GetAllChars(true)
---     local index = 1
---     for charName in pairs(charsWithProfessions) do
---         local checkedValue = "x"
---         if PcdDb[charName]["filters"]["Global"] == "y" then checkedValue = "y" else "n" end
---         CreateCheckButton(1, frame, 1)
---         index = index + 1
---     end
--- end
 
 function CharacterHasCooldownWithName(charName, cdName)
     local charData = PcdDb[charName]["professions"]
     if IsNotNullTable(charData) then
         for profName, cds in pairs(charData) do
             logIfLevel(1, "CharacterHasCooldownWithName: " .. charName .. " : " .. profName)
+            if not PcdDb[charName]["professions"][profName] then PcdDb[charName]["professions"][profName] = {} end
+            if not PcdDb[charName]["professions"][profName]["cooldowns"] then PcdDb[charName]["professions"][profName]["cooldowns"] = {} end
             if PcdDb[charName]["professions"][profName]["cooldowns"][cdName] ~= nil then
                 return true
             end
@@ -1100,7 +1125,7 @@ function CharacterHasProfessionsCooldowns(charName)
         for profName, cds in pairs(charData) do
             local cdTable = PcdDb[charName]["professions"][profName]["cooldowns"]
             if not cdTable then PcdDb[charName]["professions"][profName]["cooldowns"] = {} end
-            for cdName, x in pairs(cdNamesToConsider) do
+            for cdName, x in pairs(GetCdNamesToConsider()) do
                 if PcdDb[charName]["professions"][profName]["cooldowns"][cdName] then
                     return true
                 end
@@ -1134,8 +1159,8 @@ function CreateCheckButton(index, frame, spellIndex)
     if not frame.CheckButtons[index][spellIndex] then
         frame.CheckButtons[index][spellIndex] = CreateFrame("CheckButton", "Filter_CheckButton_" .. index .. "_" .. spellIndex, pcdFiltersFrame, "UICheckButtonTemplate")
     end
-    frame.CheckButtons[index][spellIndex]:SetPoint("TOPLEFT", 100 + spellIndex * 30, (index - 1) * -20 - 80)
-    frame.CheckButtons[index][spellIndex]:SetSize(20, 20)
+    frame.CheckButtons[index][spellIndex]:SetPoint("TOPLEFT", 100 + spellIndex * 35, (index - 1) * -20 - 80)
+    frame.CheckButtons[index][spellIndex]:SetSize(30, 30)
 end
 
 function CreateCheckButtonForCharacterFilter(index, frame, charName, spellName, spellIndex)
@@ -1233,7 +1258,7 @@ function InitAlphas()
         end
     end
     -- cooldown globals
-    for spellIndex = 2, numberCdsImplemented do
+    for spellIndex = 2, GetNumberOfActiveCds() do
         local alphaValue
         local spellName = GetSpellNameFromIndex(spellIndex)
         if PcdDb["settings"]["filters"][spellName] == "x" then alphaValue = 0.4 else alphaValue = 1 end
@@ -1303,6 +1328,28 @@ function DisableCloseOnEscape(shouldPrint)
     end
     if shouldPrint then
         print ("Disabled 'Close On Escape' for PCD. Reload UI (/reload) for this to take effect.")
+    end
+end
+
+function EnableShowOldCdsInFilters(shouldPrint)
+    if PcdDb and PcdDb["settings"] then
+        pcdShowOldCdsInFilters = true
+        PcdDb["settings"]["ShowOldCdsInFilters"] = "y"
+        PCDLDBIcon:Show("PCD")
+    end
+    if shouldPrint then
+        print ("Enabled visibility of old CDs in filters for PCD.")
+    end
+end
+
+function DisableShowOldCdsInFilters(shouldPrint)
+    if PcdDb and PcdDb["settings"] then
+        pcdShowOldCdsInFilters = nil
+        PcdDb["settings"]["ShowOldCdsInFilters"] = "n"
+        PCDLDBIcon:Show("PCD")
+    end
+    if shouldPrint then
+        print ("Disabled visibility of old CDs in filters for PCD.")
     end
 end
 
@@ -1378,6 +1425,10 @@ end
 
 function FreshInit()
     PcdDb = {}
+    InitDbTable()
+    UpdateCharacterProfessionDb()
+    InitDbTable()
+    UpdateCds()
 end
 
 function HasVersionData()
@@ -1397,10 +1448,8 @@ function UpdateVersionInDb(versionNumber)
 end
 
 function UpdateDataFormatVersion()
-    if ShouldPcdUpdate() then
-        UpdateTo0103()
-        UpdateTo0104()
-        UpdateTo0107()
+    if ShouldPcdUpdate() and pcdVersion < 116 then
+        UpdateVersionInDb(pcdVersion)
     end
 end
 
@@ -1426,9 +1475,6 @@ function CreateBroker()
                 end
 			elseif (button == "RightButton" and IsShiftKeyDown()) then
 				FreshInit()
-                InitDbTable()
-                UpdateCharacterProfessionDb()
-                UpdateCds()
 			elseif (button == "RightButton") then
 				InitDbTable()
                 if pcdOptionsFrame and pcdOptionsFrame:IsShown() then
@@ -1541,7 +1587,7 @@ SlashCmdList["PCD"] = function(msg)
         if pcdFrame and pcdFrame:IsShown() then
             CreatePCDFrame()
         end
-    elseif msg == "filters" then
+    elseif msg == "filters" or msg == "filter" then
         UpdateCds()
         CreatePcdFiltersFrame()
     elseif msg == nil or msg == "" then
@@ -1552,7 +1598,7 @@ SlashCmdList["PCD"] = function(msg)
             UpdateCds()
             CreatePCDFrame()
         end
-    elseif msg == "options" then
+    elseif msg == "options" or msg == "option" then
         InitDbTable()
         if pcdOptionsFrame and pcdOptionsFrame:IsShown() then
             pcdOptionsFrame:Hide()
