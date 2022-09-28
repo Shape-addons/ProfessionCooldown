@@ -61,16 +61,18 @@ end
 
 local lootMsgFrame = CreateFrame("Frame")
 lootMsgFrame:RegisterEvent("CHAT_MSG_LOOT")
+lootMsgFrame:RegisterEvent("CHAT_MSG_SYSTEM")
 lootMsgFrame:SetScript("OnEvent", function(self, event, arg1, arg2)
     if event == "CHAT_MSG_LOOT" then
-        if (arg1:find("^You create:") ~= nil) then
+        if (arg1:find("^You create:") ~= nil or arg1:find("^You have learned")) then
             UpdateAndRepaintIfOpen()
             logIfLevel(2, "Creation message event fired. Calling update at: ")
             logIfLevel(1, GetTime())
         end
+    elseif event == "CHAT_MSG_SYSTEM" and arg1:find("^You have learned") ~= nil then
+        UpdateAndRepaintIfOpen()
     end
 end)
-
 function getProfessionName(abilityName)
     if string.find(abilityName, "Transmute") then
         return "Alchemy"
