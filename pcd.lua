@@ -1116,7 +1116,7 @@ function CharacterHasCooldownWithName(charName, cdName)
             end
         end 
     else
-        logIflevel(1, 'table was null for ' .. charName .. " and " .. cdName)
+        logIfLevel(1, 'table was null for ' .. charName .. " and " .. cdName)
     end 
     return false
 end
@@ -1127,6 +1127,7 @@ function CharacterHasProfessionsCooldowns(charName)
         for profName, cds in pairs(charData) do
             local cdTable = PcdDb[charName]["professions"][profName]["cooldowns"]
             if not cdTable then PcdDb[charName]["professions"][profName]["cooldowns"] = {} end
+            cdTable = PcdDb[charName]["professions"][profName]["cooldowns"]
             for cdName, x in pairs(GetCdNamesToConsider()) do
                 if PcdDb[charName]["professions"][profName]["cooldowns"][cdName] then
                     return true
@@ -1135,7 +1136,7 @@ function CharacterHasProfessionsCooldowns(charName)
             logIfLevel(1, "CharacterHasCooldownWithName: " .. charName .. " : " .. profName .. " num cds: " .. #cdTable)
         end
     else
-        logIflevel(1, 'CharacterHasProfessionsCooldowns: charData table was null for ' .. charName)
+        logIfLevel(1, 'CharacterHasProfessionsCooldowns: charData table was null for ' .. charName)
     end 
     return false
 end
