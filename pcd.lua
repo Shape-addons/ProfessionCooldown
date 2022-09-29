@@ -1,5 +1,5 @@
 -- PCD start
-local pcdVersion = 116
+local pcdVersion = 118
 pcdShowMinimapButton = nil
 local pcdIsLoaded = nil
 -- local pcdShowOldCds = nil
@@ -765,9 +765,9 @@ function CreatePcdOptionsFrame()
         if PcdDb["settings"]["ShowMinimapButton"] == "y" then
             EnableMinimapButton(false)
         end
-        if PcdDb["settings"]["ShowOldCdsInFilters"] == "y" then
-            ShowOldCdsInFilters(false) 
-        end
+        -- if PcdDb["settings"]["ShowOldCds"] == "y" then
+        --     EnableShowOldCdsInFilters(false) 
+        -- end
     end
 
     if not (pcdOptionsFrame.CloseOnEscape) then
@@ -977,8 +977,8 @@ function GetSpellIconFromName(cdName)
     if cdName == "Northrend Inscription Research" then return 43127 end -- snowfall ink
     if cdName == "Minor Inscription Research" then return 39469 end -- moonglow ink
     if cdName == "Icy Prism" then return 44943 end
-    if cdName == "Smelt Titansteel" then return 37663 end
     if cdName == "Brilliant Glass"  then return 35945 end
+    if cdName == "Smelt Titansteel" then return 37663 end
     if cdName == "Void Sphere"      then return 22459 end
     return -1
 end
@@ -1253,7 +1253,7 @@ function InitAlphas()
         button:SetAlpha(alphaValue)
         if alphaValue == 1 then
             for i = 2, #pcdFiltersFrame.CheckButtons do
-                logIfLevel(3, "set " .. i .. ", " .. 1 .. " alpha for char globals to 0.4" .. alphaValue)
+                logIfLevel(1, "set " .. i .. ", " .. 1 .. " alpha for char globals to 0.4" .. alphaValue)
                 button = pcdFiltersFrame.CheckButtons[i][1]
                 button:SetAlpha(0.4)
             end
@@ -1333,27 +1333,27 @@ function DisableCloseOnEscape(shouldPrint)
     end
 end
 
-function EnableShowOldCdsInFilters(shouldPrint)
-    if PcdDb and PcdDb["settings"] then
-        pcdShowOldCdsInFilters = true
-        PcdDb["settings"]["ShowOldCdsInFilters"] = "y"
-        PCDLDBIcon:Show("PCD")
-    end
-    if shouldPrint then
-        print ("Enabled visibility of old CDs in filters for PCD.")
-    end
-end
+-- function EnableShowOldCdsInFilters(shouldPrint)
+--     if PcdDb and PcdDb["settings"] then
+--         pcdShowOldCdsInFilters = true
+--         PcdDb["settings"]["ShowOldCds"] = "y"
+--         PCDLDBIcon:Show("PCD")
+--     end
+--     if shouldPrint then
+--         print ("Enabled visibility of old CDs in filters for PCD.")
+--     end
+-- end
 
-function DisableShowOldCdsInFilters(shouldPrint)
-    if PcdDb and PcdDb["settings"] then
-        pcdShowOldCdsInFilters = nil
-        PcdDb["settings"]["ShowOldCdsInFilters"] = "n"
-        PCDLDBIcon:Show("PCD")
-    end
-    if shouldPrint then
-        print ("Disabled visibility of old CDs in filters for PCD.")
-    end
-end
+-- function DisableShowOldCdsInFilters(shouldPrint)
+--     if PcdDb and PcdDb["settings"] then
+--         pcdShowOldCdsInFilters = nil
+--         PcdDb["settings"]["ShowOldCds"] = "n"
+--         PCDLDBIcon:Show("PCD")
+--     end
+--     if shouldPrint then
+--         print ("Disabled visibility of old CDs in filters for PCD.")
+--     end
+-- end
 
 function EnableMinimapButton(shouldPrint)
     if PcdDb and PcdDb["settings"] then
@@ -1450,7 +1450,7 @@ function UpdateVersionInDb(versionNumber)
 end
 
 function UpdateDataFormatVersion()
-    if ShouldPcdUpdate() and pcdVersion < 116 then
+    if ShouldPcdUpdate() then
         UpdateVersionInDb(pcdVersion)
     end
 end
