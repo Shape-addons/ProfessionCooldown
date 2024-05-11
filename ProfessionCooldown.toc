@@ -6,4 +6,5 @@
 ## DefaultState: enabled
 ## SavedVariables: PcdDb
 embeds.xml
+pcdlocale.lua
 pcd.lua
