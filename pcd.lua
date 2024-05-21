@@ -75,32 +75,6 @@ lootMsgFrame:SetScript("OnEvent", function(self, event, arg1, arg2)
     end
 end)
 
--- function getProfessionName(abilityName)
---     if string.find(abilityName, "transmute") then
---         return "alchemy"
---     elseif string.find(abilityName, "Cloth") or string.find(abilityName, "cloth") or string.find(abilityName, "weave") or string.find(abilityName, "shroud") then
---         return "tailoring"
---     elseif string.find(abilityName, "Brilliant Glass") or string.find(abilityName, "Prism") then
---         return "jewelcrafting"
---     elseif string.find(abilityName, "Inscription Research") then
---         return "inscription"
---     elseif string.find(abilityName, "Smelt Titansteel") then
---         return "mining"
---     end
---     return nil
--- end
-
-local profNamesToConsider = { 
-    ["alchemy"] = true,
-    ["tailoring"] = true,
-    ["leatherworking"] = true,
-    ["jewelcrafting"] = true,
-    ["enchanting"] = true,
-    ["inscription"] = true,
-    ["mining"] = true,
-}
-
-
 local tbcCdNamesToConsider = {
     -- ["primal mooncloth"] = true,
     -- ["spellcloth"] = true,
@@ -1210,15 +1184,8 @@ function CamelCase(str)
     local function tchelper(first, rest)
         return first:upper()..rest:lower()
      end
-     -- Add extra characters to the pattern if you need to. _ and ' are
-     --  found in the middle of identifiers and English words.
-     -- We must also put %w_' into [%w_'] to make it handle normal stuff
-     -- and extra stuff the same.
-     -- This also turns hex numbers into, eg. 0Xa7d4
      str = str:gsub("(%a)([%w_']*)", tchelper)
      return str
-    -- todo: this sucks, find a better solution.... and rename to pascal case or title case.
-    -- return str:gsub("(%l)(%w*)", function(a,b) return string.upper(a)..b end)
 end
 
 function SetShouldShowGlobal(spellName, shouldShow)
