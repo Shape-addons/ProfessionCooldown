@@ -7,6 +7,8 @@ local pcdIsLoaded = nil
 local LDB = LibStub:GetLibrary("LibDataBroker-1.1");
 local PCDLDBIcon = LibStub:GetLibrary("LibDBIcon-1.0")
 local userLocale = GetLocale()
+local mainFrameBordersEnabled = true
+
 
 pcdSettings = {}
 pcdDefaults = {}
@@ -56,7 +58,6 @@ end
 
 function UpdateCds()
     logIfLevel(2, "Called update cds")
-    InitDbTable()
     GetCooldownsFromSpellIds()
 end
 
@@ -76,9 +77,9 @@ lootMsgFrame:SetScript("OnEvent", function(self, event, arg1, arg2)
 end)
 
 local tbcCdNamesToConsider = {
-    -- ["primal mooncloth"] = true,
-    -- ["spellcloth"] = true,
-    -- ["shadowcloth"] = true,
+    ["primal mooncloth"] = true,
+    ["spellcloth"] = true,
+    ["shadowcloth"] = true,
     -- ["transmute (TBC)"] = true,
     -- ["transmute (Vanilla)"] = true,
     ["brilliant glass"] = true,
@@ -130,22 +131,6 @@ local classColors = {
     -- [12] = "|cffa330c9", -- demon hunter
 }
 
-function initProfessionIfNeeded(profName)
-    local charName = UnitName("player")
-    if not PcdDb[charName] then 
-        PcdDb[charName] = {}
-    end
-    if not PcdDb[charName]["professions"] then
-        PcdDb[charName]["professions"] = {}
-    end
-    if not PcdDb[charName]["professions"][profName] then
-        PcdDb[charName]["professions"][profName] = {}
-    end
-    if not PcdDb[charName]["professions"][profName]["cooldowns"] then
-        PcdDb[charName]["professions"][profName]["cooldowns"] = {}
-    end
-end
-
 local debugLevel = 3
 function logIfLevel(dbLevel, text)
     if debugLevel <= dbLevel then
@@ -162,6 +147,10 @@ function RemoveCdInDb(prof, name)
         end
     end
 end
+print('wow classic Era project id is ' .. WOW_PROJECT_CLASSIC)
+print('wow classic TBC project id is ' .. WOW_PROJECT_BURNING_CRUSADE_CLASSIC)
+print('wow classic WOTLK project id is ' .. WOW_PROJECT_WRATH_CLASSIC)
+print('wow classic Cata project id is ' .. WOW_PROJECT_CATACLYSM_CLASSIC)
 
 function RenameCdInDb(prof, prevName, updatedName)
     if PcdDb then
@@ -314,7 +303,7 @@ function GetCooldownTimestamp(spellId)
     local start, duration, enabled, x = GetSpellCooldown(spellId)
     local leftOnSpell = GetCooldownLeftOnItem(start, duration)
     local doneAt = leftOnSpell + GetServerTime()
-
+    
     return doneAt
 end
 
@@ -508,9 +497,6 @@ function InitDbTable()
     end
     if (not PcdDb["settings"]["CloseOnEscape"]) then
         PcdDb["settings"]["CloseOnEscape"] = "y"
-    end
-    if (not PcdDb["settings"]["ClassColors"]) then
-        PcdDb["settings"]["ClassColors"] = "y"
     end
     if (not PcdDb["settings"]["filters"]) then
         PcdDb["settings"]["filters"] = {}
@@ -733,7 +719,8 @@ function CreatePcdOptionsFrame()
     pcdOptionsFrame.CloseOnEscape.tooltip = "If checked, Pcd frames will close when hitting the escape key"
     SetFrameTitle(pcdOptionsFrame, "PCD options")
     RegisterFrameForDrag(pcdOptionsFrame, false)
-    
+    AddBorderToFrame(pcdOptionsFrame)
+
     pcdOptionsFrame:Show()
     pcdOptionsFrame:SetPoint("CENTER", UIParent, "CENTER")
     pcdOptionsFrame:SetSize(400, 120)
@@ -788,6 +775,7 @@ function CreatePCDFrame()
     end
     local frameHeight = 50 + 17 * printedItemCount
     pcdFrame:SetSize(350,frameHeight)
+    AddBorderToFrame(pcdFrame)
     pcdFrame:Show()
     logIfLevel (1, "PCD frame created")
 end
@@ -833,10 +821,10 @@ function CreatePcdFiltersFrame()
     end
     SetFrameTitle(pcdFiltersFrame, "Profession CD Filters")
     RegisterFrameForDrag(pcdFiltersFrame, false)
-
+    AddBorderToFrame(pcdFiltersFrame)
     pcdFiltersFrame:Show()
     pcdFiltersFrame:SetPoint("CENTER", UIParent, "CENTER")
-    pcdFiltersFrame:SetSize(widthMod + 50, 20 + heightMod * 30)
+    pcdFiltersFrame:SetSize(widthMod + 50, 45 + heightMod * 30)
 end
 
 function GetNumberOfActiveCds()
@@ -903,7 +891,9 @@ function addHeader(index, frame)
     local name = GetSpellNameFromIndex(index)
     -- local icon = GetSpellIconFromId(name)
     local icon = GetSpellIconFromName(name)
-    frame.Header[index] = AddIconToFiltersFrame(index, icon)
+    if not frame.Header[index] then
+        frame.Header[index] = AddIconToFiltersFrame(index, icon)
+    end
 end
 
 function AddFiltersHeader(frame)
@@ -927,17 +917,82 @@ function AddIconToFiltersFrame(index, itemId)
     local posX = GetFilterIndexPosX(index)
     local myIcon = GetItemIcon(itemId)
     -- local myIcon = GetSpellTexture(itemId)
-    print (myIcon)
-    return AddIconToFrame(pcdFiltersFrame, "TOPLEFT", posX, -50, 30, 30, myIcon)
+    -- print (myIcon)
+    return AddIconToFrame(pcdFiltersFrame, "TOPLEFT", posX, -50, 28, 28, myIcon)
+end
+
+local createBorder = function(self, spellId, point)
+	local bc = self.pcdGlow
+    local r, g, b = GetSpellColorFromSpellId(spellId)
+        if not r then
+            return nil
+        end
+	if(not bc) then
+		if(not self:IsObjectType'Frame') then
+			bc = self:GetParent():CreateTexture(nil, 'BACKGROUND')
+		else
+			bc = self:CreateTexture(nil, "BACKGROUND")
+		end
+        
+		bc:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
+		bc:SetBlendMode"ADD"
+		-- bc:SetAlpha(.8)
+        bc:SetColorTexture(r,g,b,1)
+		bc:SetWidth(33)
+		bc:SetHeight(33)
+
+		bc:SetPoint("CENTER", point or self)
+		self.pcdGlow = bc
+	end
+
+	return bc
 end
 
 function AddIconToFrame(frame, pos, posX, posY, width, height, icon) 
-    local iconFrame = frame:CreateTexture(icon, "OVERLAY")
+    -- local iconFrame = frame:CreateTexture(icon, "BORDER")
+    -- add in spell id
+    local iconFrame = CreateFrame("Frame", "BorderFrame" .. icon, frame)
+
+    createBorder(iconFrame, dreamOfHyjalId)
+    -- BorderFrameIconLolBg:SetGradient("VERTICAL", CreateColor(0, 0, 0, 0), CreateColor(1, 1, 1, 0))
     iconFrame:SetWidth(width)
     iconFrame:SetHeight(height)
     iconFrame:SetPoint(pos, posX, posY)
-    iconFrame:SetTexture(icon)
+    -- if not iconFrame.texture then
+    iconFrame.texture = iconFrame:CreateTexture(icon)
+    -- end
+    iconFrame.texture:SetWidth(width)
+    iconFrame.texture:SetHeight(height)
+    iconFrame.texture:SetPoint(pos, 0, 0)
+    iconFrame.texture:SetTexture(icon)
+    -- iconFrame:SetTexture(iconTexture)
+    -- AddBorderToFrame(iconFrame)
     return iconFrame
+end
+
+function AddBorderToFrame(f)
+    if mainFrameBordersEnabled then
+        local frameborder=CreateFrame("Frame", "Border_Frame", f)
+        frameborder:SetAllPoints(f)
+        frameborder:SetFrameStrata("BACKGROUND")
+        frameborder:SetFrameLevel(1)
+        frameborder.left=frameborder:CreateTexture(nil,"BORDER")
+        frameborder.left:SetPoint("BOTTOMLEFT",frameborder,"BOTTOMLEFT",-2,-1)
+        frameborder.left:SetPoint("TOPRIGHT",frameborder,"TOPLEFT",-1,1)
+        frameborder.left:SetColorTexture(0,0,0,1)
+        frameborder.right=frameborder:CreateTexture(nil,"BORDER")
+        frameborder.right:SetPoint("BOTTOMLEFT",frameborder,"BOTTOMRIGHT",1,-1)
+        frameborder.right:SetPoint("TOPRIGHT",frameborder,"TOPRIGHT",2,1)
+        frameborder.right:SetColorTexture(0,0,0,1)
+        frameborder.top=frameborder:CreateTexture(nil,"BORDER")
+        frameborder.top:SetPoint("BOTTOMLEFT",frameborder,"TOPLEFT",-1,1)
+        frameborder.top:SetPoint("TOPRIGHT",frameborder,"TOPRIGHT",1,2)
+        frameborder.top:SetColorTexture(0,0,0,1)
+        frameborder.bottom=frameborder:CreateTexture(nil,"BORDER")
+        frameborder.bottom:SetPoint("BOTTOMLEFT",frameborder,"BOTTOMLEFT",-1,-1)
+        frameborder.bottom:SetPoint("TOPRIGHT",frameborder,"BOTTOMRIGHT",1,-2)
+        frameborder.bottom:SetColorTexture(0,0,0,1)
+    end
 end
 
 function addPcdFilterData()
@@ -959,7 +1014,7 @@ function addPcdFilterData()
 end
 
 function GetClassColorString(charName)
-    if PcdDb["settings"]["ClassColors"] == "y" and PcdDb[charName] and PcdDb[charName]["class"] then 
+    if PcdDb[charName] and PcdDb[charName]["class"] then 
         return classColors[PcdDb[charName]["class"]] 
     else
         return STD_WHITE
@@ -972,7 +1027,7 @@ function CreateNameTextForFilter(index, frame, charName)
     end
     local cColorString = GetClassColorString(charName)
     if not frame.CharNames[index] then
-        frame.CharNames[index] = AddTextToFrame(frame, cColorString .. CamelCase(charName), "TOPLEFT", 20, (index - 1) * -20 - 85)
+        frame.CharNames[index] = AddTextToFrame(frame, cColorString .. CamelCase(charName), "TOPLEFT", 20, (index - 1) * -20 - 95)
     else
         frame.CharNames[index]:SetText(cColorString .. CamelCase(charName))
     end
@@ -1127,7 +1182,9 @@ function HandleGlobalCdClick(cdName, shouldCheck)
     local checkedValue
     for i = 2, #pcdFiltersFrame.CheckButtons do
         local button = pcdFiltersFrame.CheckButtons[i][spellIndex]
-        button:SetAlpha(0.4)
+        if button then
+            button:SetAlpha(0.4)
+        end
     end
 end
 
@@ -1153,7 +1210,7 @@ function InitAlphas()
         local charIndex = pcdFiltersFrame.CharIndices[charName]
         local alphaValue
         local button = pcdFiltersFrame.CheckButtons[charIndex][1]
-        if PcdDb[charName]["filters"]["global"] == "x" then alphaValue = 0.4 else alphaValue = 1 end
+        if PcdDb[charName]["filters"]["global"] == "x" then alphaValue = 0 else alphaValue = 1 end
         button:SetAlpha(alphaValue)
         if alphaValue == 1 then
             for i = 2, #pcdFiltersFrame.CheckButtons do
@@ -1203,8 +1260,8 @@ function ShouldShowProf(charName, spellName)
     local charGlobalVal = PcdDb[charName]["filters"]["global"]
     local specificVal = PcdDb[charName]["filters"][spellName]
 
-    if (globalVal == "y" or charGlobalVal == "y") then return true
-    elseif globalVal == "n" or charGlobalVal == "n" then return false
+    if (globalVal == "y" or charGlobalVal == "y" or specificVal == "y") then return true
+    elseif globalVal == "n" or charGlobalVal == "n" or specificVal == "n" then return false
     else return specificVal == "y" end
 end
 

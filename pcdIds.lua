@@ -67,6 +67,18 @@ saltShakerItemId = 15846
 arcaniteItemId = 12360 -- icon for classic transmutes
 
 -- tbc 
+-- all cooldowns have a cd start period and a cd end period
+-- example: transmute arcanite starts in vanilla / era, and ends in TBC: start = 1 - end = 2
+-- some cooldowns share same item icon. Show the difference with a border color.
+-- eg. dream of azshara should have a 'water' border color.
+-- transmutes are all kind of similar. no reason to specify them further, when not relevant.
+
+-- vanilla
+-- salt shaker
+-- mooncloth cd
+-- any transmute
+
+-- tbc
 primalMightId = 29688
 primalMightItemId = 23571
 
@@ -117,11 +129,56 @@ northrendAlchemyItemId = 7810
 firePrismId = 73478
 firePrismItemId = 52304
 
-dreamOfAzsharaId = 75146
-dreamOfSkywallId = 75141
-dreamOfRagnarosId = 75145
-dreamOfDeepholmId = 75142
-dreamOfHyjalId = 75144
-dreamclothItemId = 54440
-
 livingElementsItemId = 30183 -- nether vortex
+dreamOfAzsharaId = 75146 -- volatile water
+dreamOfSkywallId = 75141 -- volatile air
+dreamOfRagnarosId = 75145 -- volatile fire
+dreamOfDeepholmId = 75142 -- volatile earth
+dreamOfHyjalId = 75144 -- volatile life
+dreamClothItemId = 54440
+
+local function GetBorderColorFromSpellIdInternal(spellId) 
+    if spellId == dreamOfHyjalId then return 61, 191, 31
+    elseif spellId == dreamOfDeepholmId then return 188, 93, 29
+    elseif spellId == dreamOfSkywallId then return 168, 203, 222
+    elseif spellId == dreamOfRagnarosId then return 216, 32, 0
+    elseif spellId == dreamOfAzsharaId then return 20, 70, 193
+    else return nil
+    end
+end
+
+function GetSpellColorFromSpellId(spellId)
+    local r, g, b = GetBorderColorFromSpellIdInternal(spellId)
+    if not r then return nil
+    else return r / 255, g / 255, b / 255
+    end
+end
+
+function GetItemIconFromSpellId(spellId)
+    if allTransmuteIds[spellId] then return primalMightItemId end
+    if spellId == northrendAlchemyId then return northrendAlchemyItemId end
+    if spellId == minorInscriptionResearchId then return northrendInscriptionResearchItemId end
+    if spellId == northrendInscriptionResearchId then return northrendInscriptionResearchItemId end
+    
+    if spellId == firePrismId then return firePrismItemId end
+    if spellId == icyPrismId then return icyPrismItemId end
+    if spellId == brilliantGlassId then return brilliantGlassItemId end
+    
+    if spellId == glacialBagId then return glacialBagItemId end
+    if spellId == primalMoonclothId then return primalMoonclothItemId end
+    if spellId == spellclothId then return spellclothItemId end
+    if spellId == shadowclothId then return shadowclothItemId end
+    if spellId == spellweaveId then return spellweaveItemId end
+    if spellId == ebonweaveId then return ebonweaveItemId end
+    if spellId == moonshroudId then return moonshroudItemId end
+    if spellId == moonclothId then return moonclothItemId end
+    if spellId == dreamOfAzsharaId or 
+    spellId == dreamOfSkywallId or 
+    spellId == dreamOfRagnarosId or 
+    spellId == dreamOfDeepholmId or 
+    spellId == dreamOfHyjalId then return dreamClothItemId end
+    
+    if spellId == titanSteelId then return titanStellItemId end
+    if spellId == voidSphereId then return voidSphereItemId end
+    if spellId == saltShakerItemId then return saltShakerItemId end
+end
