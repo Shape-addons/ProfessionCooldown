@@ -93,7 +93,7 @@ local classColors = {
     -- [12] = "|cffa330c9", -- demon hunter
 }
 
-local debugLevel = 1
+local debugLevel = 3
 function logIfLevel(dbLevel, text)
     if debugLevel <= dbLevel then
         print (text)
