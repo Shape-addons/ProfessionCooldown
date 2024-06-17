@@ -68,7 +68,7 @@ PCDL = {
         [mining] = mining,
     },
     ["deDE"] = {
-        ["alchimie"] = alchemy,
+        ["alchemie"] = alchemy,
         ["juwelenschleifen"] = jewelcrafting,
         ["lederverarbeitung"] = leatherworking,
         ["schneiderei"] = tailoring,

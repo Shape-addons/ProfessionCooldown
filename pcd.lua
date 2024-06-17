@@ -33,8 +33,8 @@ profCdTrackerFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         UpdateAndRepaintIfOpen()
     elseif not pcdIsLoaded and ((event == "ADDON_LOADED" and arg1 == "ProfessionCooldown") or event == "PLAYER_LOGIN") then
         pcdIsLoaded = true
-        UpdateDataFormatVersion()
         InitDbTable()
+        UpdateDataFormatVersion()
         LoadPcdSettings()
         if PcdDb and PcdDb["settings"] and not (PcdDb["settings"]["ShowMinimapButton"] == "n") then
             pcdShowMinimapButton = true
@@ -93,13 +93,12 @@ local classColors = {
     -- [12] = "|cffa330c9", -- demon hunter
 }
 
-local debugLevel = 3
+local debugLevel = 1
 function logIfLevel(dbLevel, text)
     if debugLevel <= dbLevel then
         print (text)
     end
 end
-
 logIfLevel(2, 'wow classic Era project id is ' .. WOW_PROJECT_CLASSIC)
 logIfLevel(2, 'wow classic TBC project id is ' .. WOW_PROJECT_BURNING_CRUSADE_CLASSIC)
 logIfLevel(2, 'wow classic WOTLK project id is ' .. WOW_PROJECT_WRATH_CLASSIC)
@@ -289,7 +288,7 @@ function UpdateCharacterProfessionDb()
                 logIfLevel(2, "added " .. skillName .. " to PCD database.")
                 primaryCount = primaryCount + 1;
                 local pcdSkillData = {
-                    profName = skillName
+                    profName = localizedSkillNames[skillName]
                 }
                 pcdSkillData.skillLevel = skillRank
                 table.insert(profs, pcdSkillData)
@@ -833,7 +832,7 @@ function addPcdFilterData()
     pcdFiltersFrame.CharIndices = {
         ["global"] = 1,
     }
-    local chars = GetAllChars(true)
+    local chars = GetAllChars(false)
     local counter = 2
     for charName, charData in pairs(chars) do
         pcdFiltersFrame.CharIndices[charName] = counter
@@ -1042,7 +1041,7 @@ end
 
 function InitAlphas()
     -- character globals
-    local chars = GetAllChars(true)
+    local chars = GetAllChars(false)
     for charName, charData in pairs(chars) do
         local charIndex = pcdFiltersFrame.CharIndices[charName]
         local alphaValue
@@ -1361,7 +1360,6 @@ function GetCooldownText(cooldown)
     local cooldownText = {}
     local cdText = ""
     local secondsLeft = cooldown - GetServerTime()
-    logIfLevel (0, "secs left: " .. secondsLeft)
     local hoursLeft = secondsLeft / 3600
     local cdColor
     if cooldown and hoursLeft <= 0 then
