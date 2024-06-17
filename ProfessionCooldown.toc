@@ -8,4 +8,6 @@
 embeds.xml
 pcdIds.lua
 pcdlocale.lua
+pcdCore.lua
+pcdFilters.lua
 pcd.lua
