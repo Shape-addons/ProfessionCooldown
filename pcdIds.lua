@@ -162,36 +162,38 @@ function GetSpellColorFromSpellId(spellId)
 end
 
 function GetItemIconFromSpellId(spellId)
-    if ListContains(spellId, allTransmuteIds) then return transmuteItemId end
-    if spellId == northrendAlchemyId then return northrendAlchemyItemId end
+    if ListContains(spellId, allTransmuteIds) then return transmuteItemId
+    elseif spellId == northrendAlchemyId then return northrendAlchemyItemId
 
-    if spellId == minorInscriptionResearchId then return northrendInscriptionResearchItemId end
-    if spellId == northrendInscriptionResearchId then return northrendInscriptionResearchItemId end
+    elseif spellId == minorInscriptionResearchId then return minorInscriptionResearchItemId
+    elseif spellId == northrendInscriptionResearchId then return northrendInscriptionResearchItemId
     
-    if spellId == brilliantGlassId then return brilliantGlassItemId end
-    if spellId == icyPrismId then return icyPrismItemId end
-    if spellId == firePrismId then return firePrismItemId end
+    elseif spellId == brilliantGlassId then return brilliantGlassItemId
+    elseif spellId == icyPrismId then return icyPrismItemId
+    elseif spellId == firePrismId then return firePrismItemId
     
-    if spellId == moonclothId then return moonclothItemId end
+    elseif spellId == moonclothId then return moonclothItemId
     
-    if spellId == primalMoonclothId then return primalMoonclothItemId end
-    if spellId == spellclothId then return spellclothItemId end
-    if spellId == shadowclothId then return shadowclothItemId end
+    elseif spellId == primalMoonclothId then return primalMoonclothItemId
+    elseif spellId == spellclothId then return spellclothItemId
+    elseif spellId == shadowclothId then return shadowclothItemId
     
-    if spellId == glacialBagId then return glacialBagItemId end
-    if spellId == spellweaveId then return spellweaveItemId end
-    if spellId == ebonweaveId then return ebonweaveItemId end
-    if spellId == moonshroudId then return moonshroudItemId end
+    elseif spellId == glacialBagId then return glacialBagItemId
+    elseif spellId == spellweaveId then return spellweaveItemId
+    elseif spellId == ebonweaveId then return ebonweaveItemId
+    elseif spellId == moonshroudId then return moonshroudItemId
     
-    if spellId == dreamOfAzsharaId or spellId == dreamOfSkywallId or spellId == dreamOfRagnarosId or spellId == dreamOfDeepholmId or spellId == dreamOfHyjalId then return dreamClothItemId end
+    elseif spellId == dreamOfAzsharaId or spellId == dreamOfSkywallId or spellId == dreamOfRagnarosId or spellId == dreamOfDeepholmId or spellId == dreamOfHyjalId
+    then return dreamClothItemId
     
-    if spellId == titanSteelId then return titanStellItemId end
+    elseif spellId == titanSteelId then return titanStellItemId
 
-    if spellId == voidSphereId then return voidSphereItemId end
-    if spellId == prismaticSphereId then return prismaticSphereItemId end
+    elseif spellId == voidSphereId then return voidSphereItemId
+    elseif spellId == prismaticSphereId then return prismaticSphereItemId
 
-    if spellId == saltShakerItemId then return saltShakerItemId end
-    if spellId == forgedDocumentsAllianceId or spellId == forgedDocumentsHordeId then return forgedDocumentsItemId end
+    elseif spellId == saltShakerItemId then return saltShakerItemId
+    elseif spellId == forgedDocumentsAllianceId or spellId == forgedDocumentsHordeId then return forgedDocumentsItemId
+    else logIfLevel(2, "GetItemIconFromSpellId - not found " .. spellId) end
 end
 
 function IsNotNullTable(item)
@@ -226,6 +228,7 @@ allTailoringIds = {
     spellweaveId,
     ebonweaveId,
     moonshroudId,
+    glacialBagId,
     -- cata
     dreamOfAzsharaId,
     dreamOfSkywallId,
@@ -275,6 +278,7 @@ function GetProfessionNameForSpellId(spellId)
         return "alchemy"
     elseif ListContains(spellId, allLeatherWorkingIds) then
         return "leatherworking"
+    else logIfLevel (2, "GetProfessionNameForSpellId - not found" .. spellId)
     end
 end
 
@@ -287,13 +291,14 @@ function GetProfessionSortKey(spellId)
     elseif (professionName == "enchanting") then return 5
     elseif (professionName == "mining") then return 6
     elseif (professionName == "leatherworking") then return 7
+    else logIfLevel (2, "GetProfessionSortKey - not found " .. professionName)
     end
 end
 
 function sortProfession(lhs, rhs)
     local left = GetProfessionSortKey(lhs)
     local right = GetProfessionSortKey(rhs)
-    return left < right --or (left == right and lhs < rhs)
+    return left < right or (left == right and lhs < rhs)
 end
 
 function GetCdNameFromSpellId(spellId)
@@ -370,11 +375,22 @@ function GetCdNamesToConsider()
     if IsCataOrLater() then
         for n,v in pairs(cataCdNamesToConsider) do addIfTrue(n, v) end
     end
-    table.sort(concatTable, sortProfession)
+
     return concatTable
 end
 
 PcdCdsToConsider = GetCdNamesToConsider()
+function GetSortedProfessions()
+    local tkeys = {}
+    for k in pairs(PcdCdsToConsider) do table.insert(tkeys, k) end
+    table.sort(tkeys, sortProfession)
+    local sortedTable = {}
+    for k, v in pairs(tkeys) do
+        sortedTable[k] = v
+    end
+    return sortedTable
+end
+PcdProfessionSortKey = GetSortedProfessions()
 
 function tablelength(T)
     local count = 0

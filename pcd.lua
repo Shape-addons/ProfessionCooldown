@@ -463,16 +463,16 @@ function GetAllNamesAndCdsOnAccount()
     if (not allOnAccount) then
         return
     end
-    local cdIdsoConsider = PcdCdsToConsider
+    local cdIdsToConsider = PcdCdsToConsider
     for charName, charData in pairs(PcdDb) do
         if not (charName == "settings") and IsNotNullTable(charData) and IsNotNullTable(charData["professions"]) then
             for profName, pcdProfData in pairs(charData["professions"]) do
                 if IsNotNullTable(pcdProfData) and IsNotNullTable(pcdProfData["cooldowns"]) then
                     for spellId, doneAt in pairs(pcdProfData["cooldowns"]) do
-                        if (cdIdsoConsider[spellId]) then
+                        if (cdIdsToConsider[spellId]) then
                             table.insert(charSpellAndCd, {charName, spellId, doneAt} )
                         end
-                        if not (cdIdsoConsider[spellId]) then
+                        if not (cdIdsToConsider[spellId]) then
                             logIfLevel(1, "did not consider " .. spellId .. " for " .. charName)
                         end
                     end
@@ -707,9 +707,9 @@ function GetSpellIdFromIndex(index)
     if index == 1 then return "global"
     else 
         local counter = 2
-        for n,v in pairs(PcdCdsToConsider) do
-            if counter == index then
-                return n
+        for n,v in pairs(PcdProfessionSortKey) do
+            if n + 1 == index then
+                return v
             else
                 counter = counter + 1
             end
@@ -837,7 +837,7 @@ function addPcdFilterData()
     for charName, charData in pairs(chars) do
         pcdFiltersFrame.CharIndices[charName] = counter
         CreateNameTextForFilter(counter, pcdFiltersFrame, charName)
-        for i = 1, NumberOfActivePcdCds do
+        for i = 1, NumberOfActivePcdCds + 1 do
             CreateCheckButtonForCharacterFilter(counter, pcdFiltersFrame, charName, GetSpellIdFromIndex(i), i)
         end
         counter = counter + 1
