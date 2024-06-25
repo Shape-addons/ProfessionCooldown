@@ -67,7 +67,7 @@ lootMsgFrame:RegisterEvent("CHAT_MSG_LOOT")
 lootMsgFrame:RegisterEvent("CHAT_MSG_SYSTEM")
 lootMsgFrame:SetScript("OnEvent", function(self, event, arg1, arg2)
     if event == "CHAT_MSG_LOOT" then
-        if (arg1:find("^You create:") ~= nil or arg1:find("^You have learned")) then
+        if (arg1:find("^You create:") ~= nil or arg1:find("^You have learned")) or not userLocale == "enUS" then
             UpdateAndRepaintIfOpen()
             logIfLevel(2, "Creation message event fired. Calling update at: ")
             logIfLevel(1, GetTime())
@@ -186,7 +186,7 @@ function GetCooldownsFromSpellIds()
             if jcSkill >= 425 then -- wotlk only
                 SetCooldownForSpell("icy prism", "jewelcrafting", icyPrismId)
             end
-            if inscriptionSkill >= 500 then
+            if jcSkill >= 500 then
                 SetCooldownForSpell("fire prism", "jewelcrafting", firePrismId)
             end
         end
