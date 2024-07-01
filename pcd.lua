@@ -1,13 +1,14 @@
 -- PCD start
 local pcdVersion = 119
 pcdShowMinimapButton = nil
+pcdShowOnLogin = nil
 local pcdIsLoaded = nil
 -- local pcdShowOldCds = nil
 
 local LDB = LibStub:GetLibrary("LibDataBroker-1.1");
 local PCDLDBIcon = LibStub:GetLibrary("LibDBIcon-1.0")
 local userLocale = GetLocale()
-local mainFrameBordersEnabled = true
+local mainFrameBordersEnabled = false
 
 
 pcdSettings = {}
@@ -42,6 +43,11 @@ profCdTrackerFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         end
         UpdateCds()
         CreateBroker()
+        if PcdDb and PcdDb["settings"] and not (PcdDb["settings"]["ShowOnLogin"] == "n") then
+            pcdShowOnLogin = true
+            CreatePCDFrame()
+            logIfLevel(2, "show on login set to true")
+        end
     end
 end)
 
@@ -501,10 +507,13 @@ function CreatePcdOptionsFrame()
 
     if PcdDb and PcdDb["settings"] then
         if PcdDb["settings"]["CloseOnEscape"] == "y" then
-            EnableCloseOnEscape(false)
+            EnableCloseOnEscape(false, true)
         end
         if PcdDb["settings"]["ShowMinimapButton"] == "y" then
             EnableMinimapButton(false)
+        end
+        if PcdDb["settings"]["ShowOnLogin"] == "y" then
+            EnableShowOnLogin(false, true)
         end
         -- if PcdDb["settings"]["ShowOldCds"] == "y" then
         --     EnableShowOldCdsInFilters(false) 
@@ -524,6 +533,13 @@ function CreatePcdOptionsFrame()
         pcdOptionsFrame.ShowMinimapButtonText = pcdOptionsFrame:CreateFontString(nil, "OVERLAY")
     end
 
+    if not (pcdOptionsFrame.ShowOnLogin) then
+        pcdOptionsFrame.ShowOnLogin = CreateFrame("CheckButton", "ShowOnLogin_CheckButton", pcdOptionsFrame, "UICheckButtonTemplate")
+    end
+    if not (pcdOptionsFrame.ShowOnLoginText) then
+        pcdOptionsFrame.ShowOnLoginText = pcdOptionsFrame:CreateFontString(nil, "OVERLAY")
+    end
+
     pcdOptionsFrame.CloseOnEscapeText:SetFontObject("GameFontHighlight")
     pcdOptionsFrame.CloseOnEscapeText:SetPoint("TOPLEFT", 40, -40)
     pcdOptionsFrame.CloseOnEscapeText:SetText("Close on escape (disable requires reload)")
@@ -534,6 +550,11 @@ function CreatePcdOptionsFrame()
     pcdOptionsFrame.ShowMinimapButtonText:SetText("Show mini map button")
     pcdOptionsFrame.ShowMinimapButtonText:SetFont("Fonts\\FRIZQT__.ttf", 11, "OUTLINE")
     
+    pcdOptionsFrame.ShowOnLoginText:SetFontObject("GameFontHighlight")
+    pcdOptionsFrame.ShowOnLoginText:SetPoint("TOPLEFT", 40, -80)
+    pcdOptionsFrame.ShowOnLoginText:SetText("Show on login")
+    pcdOptionsFrame.ShowOnLoginText:SetFont("Fonts\\FRIZQT__.ttf", 11, "OUTLINE")
+
     if PcdDb["settings"]["CloseOnEscape"] == "y" then
         pcdOptionsFrame.CloseOnEscape:SetChecked(PcdDb["settings"]["CloseOnEscape"])
     else
@@ -546,6 +567,12 @@ function CreatePcdOptionsFrame()
         pcdOptionsFrame.ShowMinimapButton:SetChecked(nil)
     end
 
+    if PcdDb["settings"]["ShowOnLogin"] == "y" then
+        pcdOptionsFrame.ShowOnLogin:SetChecked(PcdDb["settings"]["ShowOnLogin"])
+    else
+        pcdOptionsFrame.ShowOnLogin:SetChecked(nil)
+    end
+
     pcdOptionsFrame.CloseOnEscape:SetPoint("TOPLEFT", 350, -34)
     pcdOptionsFrame.CloseOnEscape:SetScript("OnClick", 
         function()
@@ -553,7 +580,8 @@ function CreatePcdOptionsFrame()
             if (isChecked) then
                 pcdOptionsFrame.CloseOnEscape:SetChecked(true)
                 PcdDb["settings"]["CloseOnEscape"] = "y"
-                EnableCloseOnEscape(true)
+                EnableCloseOnEscape(true, true)
+                pcdOptionsFrame.ShowOnLogin:SetChecked(nil)
             else
                 pcdOptionsFrame.CloseOnEscape:SetChecked(nil)
                 PcdDb["settings"]["CloseOnEscape"] = "n"
@@ -575,17 +603,35 @@ function CreatePcdOptionsFrame()
                 DisableMinimapButton(true)
             end
         end)
+
+    pcdOptionsFrame.ShowOnLogin:SetPoint("TOPLEFT", 350, -74)
+    pcdOptionsFrame.ShowOnLogin:SetScript("OnClick", 
+        function()
+            local isChecked = pcdOptionsFrame.ShowOnLogin:GetChecked()
+            if (isChecked) then
+                pcdOptionsFrame.ShowOnLogin:SetChecked(true)
+                PcdDb["settings"]["ShowOnLogin"] = "y"
+                EnableShowOnLogin(true, true)
+                pcdOptionsFrame.CloseOnEscape:SetChecked(nil)
+            else
+                pcdOptionsFrame.ShowOnLogin:SetChecked(nil)
+                PcdDb["settings"]["ShowOnLogin"] = "n"
+                DisableShowOnLogin(true)
+            end
+        end)
     
     pcdOptionsFrame.CloseOnEscape:Show()
     pcdOptionsFrame.ShowMinimapButton:Show()
+    pcdOptionsFrame.ShowOnLogin:Show()
     pcdOptionsFrame.CloseOnEscape.tooltip = "If checked, Pcd frames will close when hitting the escape key"
+    pcdOptionsFrame.ShowOnLogin.tooltip = "Does not work with close on escape"
     SetFrameTitle(pcdOptionsFrame, "PCD options")
     RegisterFrameForDrag(pcdOptionsFrame, false)
     AddBorderToFrame(pcdOptionsFrame)
 
     pcdOptionsFrame:Show()
     pcdOptionsFrame:SetPoint("CENTER", UIParent, "CENTER")
-    pcdOptionsFrame:SetSize(400, 120)
+    pcdOptionsFrame:SetSize(400, 110)
 end
 
 pcdFrame = CreateFrame("Frame", "PCDOverviewFrame", UIParent)
@@ -608,7 +654,7 @@ function CreatePCDFrame()
     end
 
     if PcdDb and PcdDb["settings"] and PcdDb["settings"]["CloseOnEscape"] == "y" then
-        EnableCloseOnEscape(false)
+        EnableCloseOnEscape(false, true)
     end
     SetFrameTitle(pcdFrame, "Profession CD Tracker")
     RegisterFrameForDrag(pcdFrame, true)
@@ -681,7 +727,7 @@ function CreatePcdFiltersFrame()
     local widthMod = GetFilterIndexPosX(NumberOfActivePcdCds + 1)
 
     if PcdDb and PcdDb["settings"] and PcdDb["settings"]["CloseOnEscape"] == "y" then
-        EnableCloseOnEscape(false)
+        EnableCloseOnEscape(false, true)
     end
     SetFrameTitle(pcdFiltersFrame, "Profession CD Filters")
     RegisterFrameForDrag(pcdFiltersFrame, false)
@@ -786,19 +832,20 @@ function AddIconToFrame(frame, pos, posX, posY, width, height, icon, spellId)
     -- local iconFrame = frame:CreateTexture(icon, "BORDER")
     -- add in spell id
     local iconFrame = CreateFrame("Frame", "BorderFrame" .. icon, frame)
-
+    
     createBorder(iconFrame, spellId)
     -- BorderFrameIconLolBg:SetGradient("VERTICAL", CreateColor(0, 0, 0, 0), CreateColor(1, 1, 1, 0))
     iconFrame:SetWidth(width)
     iconFrame:SetHeight(height)
     iconFrame:SetPoint(pos, posX, posY)
-    -- if not iconFrame.texture then
-    iconFrame.texture = iconFrame:CreateTexture(icon)
-    -- end
+    if not iconFrame.texture then
+        iconFrame.texture = iconFrame:CreateTexture(icon)
+    end
     iconFrame.texture:SetWidth(width)
     iconFrame.texture:SetHeight(height)
     iconFrame.texture:SetPoint(pos, 0, 0)
     iconFrame.texture:SetTexture(icon)
+    iconFrame.texture.tooltip = GetCdNameFromSpellId(spellId)
     -- iconFrame:SetTexture(iconTexture)
     -- AddBorderToFrame(iconFrame)
     logIfLevel (1, "icon added")
@@ -1126,11 +1173,14 @@ function ClearFontStrings(f)
     end
 end
 
-function EnableCloseOnEscape(shouldPrint)
+function EnableCloseOnEscape(shouldPrint, disableShowOnLogin)
     if PcdDb and PcdDb["settings"] then
         PcdDb["settings"]["CloseOnEscape"] = "y"
         if (shouldPrint) then
             print ("Enabled 'Close on escape' for PCD.")
+        end
+        if disableShowOnLogin then
+            DisableShowOnLogin(shouldPrint, false)
         end
     end
     tinsert(UISpecialFrames, pcdFrame:GetName())
@@ -1138,12 +1188,15 @@ function EnableCloseOnEscape(shouldPrint)
     tinsert(UISpecialFrames, pcdFiltersFrame:GetName())
 end
 
-function DisableCloseOnEscape(shouldPrint)
+function DisableCloseOnEscape(shouldPrint, disableShowOnLogin)
     if PcdDb and PcdDb["settings"] then
         PcdDb["settings"]["CloseOnEscape"] = "n"
     end
     if shouldPrint then
         print ("Disabled 'Close On Escape' for PCD. Reload UI (/reload) for this to take effect.")
+    end
+    if disableShowOnLogin then
+        DisableShowOnLogin(shouldPrint, false)
     end
 end
 
@@ -1188,6 +1241,29 @@ function DisableMinimapButton(shouldPrint)
     end
     if shouldPrint then
         print ("Minimap button visibility disabled for PCD.")
+    end
+end
+
+function EnableShowOnLogin(shouldPrint, disableCloseOnEscape)
+    if PcdDb and PcdDb["settings"] then
+        pcdShowOnLogin = true
+        PcdDb["settings"]["ShowOnLogin"] = "y"
+    end
+    if shouldPrint then
+        print ("PCD overview will be shown on login.")
+    end
+    if disableCloseOnEscape then
+        DisableCloseOnEscape(shouldPrint, false)
+    end
+end
+
+function DisableShowOnLogin(shouldPrint)
+    if PcdDb and PcdDb["settings"] then
+        pcdShowOnLogin = false
+        PcdDb["settings"]["ShowOnLogin"] = "n"
+    end
+    if shouldPrint then
+        print ("PCD overview will be hidden login.")
     end
 end
 
@@ -1393,8 +1469,12 @@ SlashCmdList["PCD"] = function(msg)
             CreatePCDFrame()
         end
     elseif msg == "filters" or msg == "filter" then
-        UpdateCds()
-        CreatePcdFiltersFrame()
+        if pcdFiltersFrame and pcdFiltersFrame:IsShown() then
+            pcdFiltersFrame:Hide()
+        else
+            UpdateCds()
+            CreatePcdFiltersFrame()
+        end
     elseif msg == nil or msg == "" then
         UpdateDataFormatVersion()
         if pcdFrame and pcdFrame:IsShown() then
@@ -1424,5 +1504,7 @@ SlashCmdList["PCD"] = function(msg)
         debugLevel = 3
     elseif msg == "help" then
         PrintHelp()
+    else
+        print ("'/pcd " .. msg .. "' is not a valid pcd command")
     end
 end
