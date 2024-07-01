@@ -1,15 +1,16 @@
-# Profession Cooldown v. 1.23
+# Profession Cooldown v. 1.24
 Profession Cooldown (PCD) tracks the cooldown of profession abilities across the characters on your account. It's fairly simple, and mostly consists of a simple overview.
-By default, the addon will only track a given profession cooldown when the ability first goes on cooldown. That means, if one is to create a piece of Spellcloth, the addon will track it. Optionally the player can choose to update on spell id (still in beta, not considered 'stable' yet), enabled from the options frame.
-Your profession window has to be open, in order to record active cooldowns. Currently it tracks:
+The addon will track all cooldowns, that are chosen for the character (all by default - use /pcd filters to choose which ones).
+It should support all wow client languages, but this is very new. If you are having issues, please let me know so I can fix them.
+Currently it tracks:
 
 - Leatherworking: Salt shaker.
 - Alchemy: All transmutes, Northrend Research
-- Jewelcrafting: Brilliant Glass, Icy Prism
-- Tailoring: TBC cloths, WotLK cloths, Glacial Bag
-- Enchanting: Void Sphere
+- Jewelcrafting: Brilliant Glass, Icy Prism, Fire prism
+- Tailoring: TBC cloths, WotLK cloths, Glacial Bag, Dreamcloth
+- Enchanting: Void Sphere, Prismatic sphere
 - Mining: Smelt Titansteel
-- Inscription: Minor research, Northrend research
+- Inscription: Minor research, Northrend research, documents
 
 ## Commands:
 
