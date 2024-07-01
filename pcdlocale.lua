@@ -56,6 +56,8 @@ local tailoring = "tailoring"
 local enchanting = "enchanting"
 local inscription = "incscription"
 local mining = "mining"
+pcdLootCreated = "You create"
+pcdLearnedRecipe = "You have learned"
 
 PCDL = {
     ["enUS"] = {
@@ -66,15 +68,19 @@ PCDL = {
         [enchanting] = enchanting,
         [inscription] = inscription,
         [mining] = mining,
+        [pcdLootCreated] = pcdLootCreated,
+        [pcdLearnedRecipe] = pcdLearnedRecipe,
     },
     ["deDE"] = {
         ["alchemie"] = alchemy,
-        ["juwelenschleifen"] = jewelcrafting,
+        ["juwelierskunst"] = jewelcrafting,
         ["lederverarbeitung"] = leatherworking,
         ["schneiderei"] = tailoring,
         ["verzauberkunst"] = enchanting,
-        ["inschrift"] = inscription,
+        ["inschriftenkunde"] = inscription,
         ["bergbau"] = mining,
+        [pcdLootCreated] = "Ihr stellt her",
+        [pcdLearnedRecipe] = "Ihr habt gelernt",
     },
     ["esES"] = {
         ["alquimia"] = alchemy,
@@ -84,15 +90,30 @@ PCDL = {
         ["encantamiento"] = enchanting,
         ["inscripción"] = inscription,
         ["minería"] = mining,
+        [pcdLootCreated] = "Creas",
+        [pcdLearnedRecipe] = "Has aprendido",
+    },
+    ["esMX"] = {
+        ["alquimia"] = alchemy,
+        ["joyería"] = jewelcrafting,
+        ["peletería"] = leatherworking,
+        ["sastrería"] = tailoring,
+        ["encantamiento"] = enchanting,
+        ["inscripción"] = inscription,
+        ["minería"] = mining,
+        [pcdLootCreated] = "Creas",
+        [pcdLearnedRecipe] = "Has aprendido",
     },
     ["frFR"] = {
         ["alchimie"] = alchemy,
         ["joaillerie"] = jewelcrafting,
         ["travail du cuir"] = leatherworking,
         ["couture"] = tailoring,
-        ["enchentement"] = enchanting,
+        ["enchantement"] = enchanting,
         ["calligraphie"] = inscription,
         ["minage"] = mining,
+        [pcdLootCreated] = "Vous créez",
+        [pcdLearnedRecipe] = "Vous avez appris ",
     },
     ["itIT"] = {
         ["alchimia"] = alchemy,
@@ -102,15 +123,19 @@ PCDL = {
         ["incantamento"] = enchanting,
         ["runografia"] = inscription,
         ["estrazione"] = mining,
+        [pcdLootCreated] = "Hai creato",
+        [pcdLearnedRecipe] = "Hai imparato",
     },
     ["ptBR"] = {
         ["alquimia"] = alchemy,
         ["joalheria"] = jewelcrafting,
-        ["courearia"] = leatherworking,
+        ["couraria"] = leatherworking,
         ["alfaiataria"] = tailoring,
         ["encantamento"] = enchanting,
         ["escrivania"] = inscription,
         ["mineração"] = mining,
+        [pcdLootCreated] = "Você cria",
+        [pcdLearnedRecipe] = "Você aprendeu",
     },
     ["ruRU"] = {
         ["алхимия"] = alchemy,
@@ -120,6 +145,8 @@ PCDL = {
         ["наложение чар"] = enchanting,
         ["начертание"] = inscription,
         ["горное дело"] = mining,
+        [pcdLootCreated] = "Вы создаете",
+        [pcdLearnedRecipe] = "Вы научились создавать",
     },
     ["koKR"] = {
         ["연금술"] = alchemy,
@@ -129,6 +156,8 @@ PCDL = {
         ["마법부여"] = enchanting,
         ["주문각인"] = inscription,
         ["채광"] = mining,
+        [pcdLootCreated] = "만들었습니다",
+        [pcdLearnedRecipe] = "익혔습니다",
     },
     ["zhCN"] = {
         ["炼金术"] = alchemy,
@@ -138,6 +167,19 @@ PCDL = {
         ["附魔"] = enchanting,
         ["铭文"] = inscription,
         ["采矿"] = mining,
+        [pcdLootCreated] = "你制造了",
+        [pcdLearnedRecipe] = "你已经学会了",
+    },
+    ["zhTW"] = {
+        ["鍊金術"] = alchemy,
+        ["珠寶設計"] = jewelcrafting,
+        ["製皮"] = leatherworking,
+        ["裁縫"] = tailoring,
+        ["附魔"] = enchanting,
+        ["銘文"] = inscription,
+        ["採礦"] = mining,
+        [pcdLootCreated] = "你製造了",
+        [pcdLearnedRecipe] = "你已經學會了",
     }
 }
 
