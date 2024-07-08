@@ -132,6 +132,9 @@ function GetCooldownsFromSpellIds()
         if PcdDb[charName]["professions"]["tailoring"] then
             logIfLevel(1, "Tailoring found")
             local tailoringSkill = PcdDb[charName]["professions"]["tailoring"]["skill"]
+            if tailoringSkill >= 250 then
+                SetCooldownForSpell("mooncloth", "tailoring", moonclothId)
+            end
             if tailoringSkill >= 350 then -- tbc only
                 SetCooldownForSpell("primal mooncloth", "tailoring", primalMoonclothId)
                 SetCooldownForSpell("spellcloth", "tailoring", spellclothId)
