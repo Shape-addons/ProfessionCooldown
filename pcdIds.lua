@@ -302,6 +302,7 @@ function sortProfession(lhs, rhs)
 end
 
 function GetCdNameFromSpellId(spellId)
+    if spellId == saltShakerItemId then return GetItemInfo(saltShakerItemId) end
     local name = GetSpellInfo(spellId)
 
     -- if the spell is a transmute, the first part of the spell name is description enough
@@ -314,9 +315,9 @@ function GetCdNameFromSpellId(spellId)
 end
 
 function IsVersion(x) return x == WOW_PROJECT_ID end
-function IsTbcOrLater() return WOW_PROJECT_ID >= WOW_PROJECT_BURNING_CRUSADE_CLASSIC end
-function IsWrathOrLater() return WOW_PROJECT_ID >= WOW_PROJECT_WRATH_CLASSIC end
-function IsCataOrLater() return WOW_PROJECT_ID >= WOW_PROJECT_CATACLYSM_CLASSIC end
+function IsTbcOrLater() return WOW_PROJECT_ID >= 5 end
+function IsWrathOrLater() return WOW_PROJECT_ID >= 11 end
+function IsCataOrLater() return WOW_PROJECT_ID >= 14 end
 
 local vanillaNamesToConsider = {
     [saltShakerItemId] = IsVersion(WOW_PROJECT_CLASSIC),

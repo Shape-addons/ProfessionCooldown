@@ -10,7 +10,6 @@ local PCDLDBIcon = LibStub:GetLibrary("LibDBIcon-1.0")
 local userLocale = GetLocale()
 local mainFrameBordersEnabled = false
 
-
 pcdSettings = {}
 pcdDefaults = {}
 pcdDefaults.spacing = 14
@@ -107,37 +106,6 @@ function logIfLevel(dbLevel, text)
         print (text)
     end
 end
-logIfLevel(2, 'wow classic Era project id is ' .. WOW_PROJECT_CLASSIC)
-logIfLevel(2, 'wow classic TBC project id is ' .. WOW_PROJECT_BURNING_CRUSADE_CLASSIC)
-logIfLevel(2, 'wow classic WOTLK project id is ' .. WOW_PROJECT_WRATH_CLASSIC)
-logIfLevel(2, 'wow classic Cata project id is ' .. WOW_PROJECT_CATACLYSM_CLASSIC)
-logIfLevel(2, 'current version is ' .. WOW_PROJECT_ID)
-
-function UpdateSaltShakerCd()
-    local charName = GetCharAndRealm()
-    local lw = PcdDb[charName]["professions"]["leatherworking"]
-    if lw and lw["skill"] >= 250 then
-        local startTime, duration, _ = GetItemCooldown(15846)
-        local secondsLeft = GetCooldownLeftOnItem(startTime, duration)
-        if (secondsLeft > 0) then
-            PcdDb[charName]["professions"]["leatherworking"]["cooldowns"] = { ["Salt Shaker"] = secondsLeft + GetServerTime() }
-        end
-    end
-end
-
--- function GetCooldowns()
---     -- local highestTransmuteCd = GetTransmuteCd()
---     -- loop over all relevant spell ids
---     local spellId = 28569
---     if HasCurrentCooldown(spellId) then SetCooldownForSpellId(spellId) end
--- end
-
--- function SetCooldownForSpellId(spellId)
---     local charName = GetCharAndRealm()
---     local realmName = GetRealmName()
---     local charAndRealm = charName .. ":" .. realmName
---     print (charAndRealm .. " " .. GetCdNameFromSpellId(spellId) .. " " .. GetCooldownTimestamp(spellId))
--- end
 
 -- /script GetCooldownsFromSpellIds()
 function GetCooldownsFromSpellIds()
@@ -203,6 +171,13 @@ function GetCooldownsFromSpellIds()
             local enchantingSkill = PcdDb[charName]["professions"]["enchanting"]["skill"]
             if enchantingSkill >= 350 then
                 SetCooldownForSpell("void sphere", "enchanting", voidSphereId)
+            end
+        end
+        if PcdDb[charName]["professions"]["leatherworking"] then
+            logIfLevel(1, "leatherworking found")
+            local leatherworkingSkill = PcdDb[charName]["professions"]["leatherworking"]["skill"]
+            if leatherworkingSkill >= 250 then
+                SetCooldownForSpell("salt shaker", "leatherworking", saltShakerItemId)
             end
         end
         if PcdDb[charName]["professions"]["inscription"] then

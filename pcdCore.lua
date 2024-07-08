@@ -26,6 +26,11 @@ function GetSecondsLeftOnItemCd(itemID)
 end
 
 function GetCooldownTimestamp(spellId)
+    if spellId == saltShakerItemId then 
+        local x = GetSecondsLeftOnItemCd(saltShakerItemId)
+        if not x or x < 0 then return 0 end
+        return GetSecondsLeftOnItemCd(saltShakerItemId) + GetServerTime()
+    end
     local start, duration, enabled, x = GetSpellCooldown(spellId)
     local leftOnSpell = GetCooldownLeftOnItem(start, duration)
     local doneAt = leftOnSpell + GetServerTime()
