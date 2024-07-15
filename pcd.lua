@@ -242,13 +242,13 @@ function SetCooldownForSpell(cdName, professionName, spellId)
     SetCooldownTo(spellId, professionName, timestamp)
 end
 
-function SetCooldownTo(cdName, professionName, timestamp)
+function SetCooldownTo(spellId, professionName, timestamp)
     local charName = GetCharAndRealm()
     if not PcdDb[charName]["professions"][professionName]["cooldowns"] or not type(PcdDb[charName]["professions"][professionName]["cooldowns"]) == "table" then
         PcdDb[charName]["professions"][professionName]["cooldowns"] = {}
     end
-    PcdDb[charName]["professions"][professionName]["cooldowns"][cdName] = timestamp
-    logIfLevel(1, "set cooldown timestamp of " .. cdName .. " to " .. PcdDb[charName]["professions"][professionName]["cooldowns"][cdName])
+    PcdDb[charName]["professions"][professionName]["cooldowns"][spellId] = timestamp
+    logIfLevel(1, "set cooldown timestamp of " .. spellId .. " to " .. PcdDb[charName]["professions"][professionName]["cooldowns"][spellId])
 end
 
 function UpdateCharacterProfessionDb()
@@ -456,6 +456,7 @@ function GetAllNamesAndCdsOnAccount()
                 if IsNotNullTable(pcdProfData) and IsNotNullTable(pcdProfData["cooldowns"]) then
                     for spellId, doneAt in pairs(pcdProfData["cooldowns"]) do
                         if (cdIdsToConsider[spellId]) then
+                            logIfLevel(1, "considering " .. spellId .. " for " .. charName .. " - done at " .. doneAt)
                             table.insert(charSpellAndCd, {charName, spellId, doneAt} )
                         end
                         if not (cdIdsToConsider[spellId]) then
@@ -1318,9 +1319,7 @@ function CreateBroker()
 		icon = "Interface\\Icons\\inv_misc_pocketwatch_01",
 		OnClick = function(self, button)
 			if (button == "LeftButton" and IsShiftKeyDown()) then
-				InitDbTable()
-                UpdateCharacterProfessionDb()
-                UpdateCds()
+				CreatePcdFiltersFrame()
 			elseif (button == "LeftButton") then
 				UpdateDataFormatVersion()
                 if pcdFrame and pcdFrame:IsShown() then
@@ -1344,10 +1343,13 @@ function CreateBroker()
 			doUpdateMinimapButton = nil;
 		end,
 		OnTooltipShow = function(tooltip)
+            logIfLevel(1, "Update triggered from OnTooltipShow")
+            UpdateCds()
 			doUpdateMinimapButton = true;
 			UpdateMinimapButton(tooltip, doUpdateMinimapButton);
 		end,
 		OnEnter = function(self, button)
+            logIfLevel(1, "Update triggered from OnEnter")
             UpdateCds()
 			GameTooltip:SetOwner(self, "ANCHOR_NONE")
 			GameTooltip:SetPoint("TOPLEFT", self, "BOTTOMLEFT")
@@ -1378,7 +1380,7 @@ function UpdateMinimapButton(tooltip, usingPanel)
         tooltip:AddLine(" ");
 		tooltip:AddLine("|cFF9CD6DELeft-Click|r Show Cooldowns");
 		tooltip:AddLine("|cFF9CD6DERight-Click|r Show Options");
-		tooltip:AddLine("|cFF9CD6DEShift Left-Click|r Trigger Manual Update");
+		tooltip:AddLine("|cFF9CD6DEShift Left-Click|r Show filters");
 		tooltip:AddLine("|cFF9CD6DEShift Right-Click|r Reset All Data");
 		C_Timer.After(1, function()
 			UpdateMinimapButton(tooltip, usingPanel);
