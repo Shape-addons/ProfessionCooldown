@@ -720,12 +720,9 @@ function GetFilterIndexFromSpellId(spellId)
     -- /script print(GetFilterIndexFromSpellId(northrendAlchemyId))
     -- /script print(GetFilterIndexFromSpellId(transmuteId))
     if spellId == "global" then return 1 end
-    local index = 2
-    for x in pairs(PcdCdsToConsider) do
-        if spellId == x then 
-            return index 
-        else 
-            index = index + 1
+    for x, id in pairs(GetSortedProfessions()) do
+        if spellId == id then
+            return x + 1
         end
     end
 end
@@ -870,7 +867,6 @@ function addPcdFilterData()
         end
         counter = counter + 1
     end
-    InitAlphas()
     return counter
 end
 
@@ -902,25 +898,29 @@ end
 
 function CreateGlobalCheckButtonForCds()
     CreateNameTextForFilter(1, pcdFiltersFrame, "global")
-    for cdName in pairs(PcdCdsToConsider) do
+    for x, cdName in pairs(GetSortedProfessions()) do
         local checkedValue = "x"
         if PcdDb["settings"]["filters"][cdName] == "y" then checkedValue = "y" else checkedValue = nil end
-        local spellIndex = GetFilterIndexFromSpellId(cdName)
-        CreateCheckButton(1, pcdFiltersFrame, spellIndex)
-        pcdFiltersFrame.CheckButtons[1][spellIndex]:SetChecked(checkedValue)
-        pcdFiltersFrame.CheckButtons[1][spellIndex]:SetScript("OnClick", 
-            function()
-                local isChecked = pcdFiltersFrame.CheckButtons[1][spellIndex]:GetChecked()
-                if (isChecked) then
-                    pcdFiltersFrame.CheckButtons[1][spellIndex]:SetChecked(true)
-                    SetShouldShowGlobal(cdName, "y")
-                else
-                    pcdFiltersFrame.CheckButtons[1][spellIndex]:SetChecked(nil)
-                    SetShouldShowGlobal(cdName, "n")
-                end
-                HandleGlobalCdClick(cdName, not isChecked)
-                UpdateAndRepaintIfOpen()
-            end)
+        local spellIndex = x + 1
+        if spellIndex then
+            CreateCheckButton(1, pcdFiltersFrame, spellIndex)
+            pcdFiltersFrame.CheckButtons[1][spellIndex]:SetChecked(checkedValue)
+            pcdFiltersFrame.CheckButtons[1][spellIndex]:SetScript("OnClick", 
+                function()
+                    local isChecked = pcdFiltersFrame.CheckButtons[1][spellIndex]:GetChecked()
+                    local newValue
+                    if isChecked then newValue = "y" else newValue = "n" end
+                    if (isChecked) then
+                        pcdFiltersFrame.CheckButtons[1][spellIndex]:SetChecked(true)
+                        SetShouldShowGlobalSpell(cdName, "y")
+                    else
+                        pcdFiltersFrame.CheckButtons[1][spellIndex]:SetChecked(nil)
+                        SetShouldShowGlobalSpell(cdName, "n")
+                    end
+                    HandleGlobalCdClick(cdName, newValue)
+                    UpdateAndRepaintIfOpen()
+                end)
+        end
     end
 end
 
@@ -1003,10 +1003,10 @@ function CreateCheckButtonForCharacterFilter(index, frame, charName, spellId, sp
             local isChecked = frame.CheckButtons[index][spellIndex]:GetChecked()
             if (isChecked) then
                 frame.CheckButtons[index][spellIndex]:SetChecked(true)
-                SetShouldShowProf(charName, spellId, "y")
+                SetShouldShowCdForChar(charName, spellId, "y")
             else
                 frame.CheckButtons[index][spellIndex]:SetChecked(nil)
-                SetShouldShowProf(charName, spellId, "n")
+                SetShouldShowCdForChar(charName, spellId, "n")
             end
             if spellIndex == 1 then HandleGlobalCharacterClick(charName, isChecked)
             else HandleSpecificClick(charName, spellId, isChecked) end
@@ -1018,37 +1018,27 @@ end
 
 function HandleSpecificClick(charName, spellId, shouldCheck)
     local charIndex = pcdFiltersFrame.CharIndices[charName]
-    pcdFiltersFrame.CheckButtons[charIndex][1]:SetAlpha(0.4)
     pcdFiltersFrame.CheckButtons[charIndex][1]:SetChecked(nil)
-    pcdFiltersFrame.CheckButtons[1][GetFilterIndexFromSpellId(spellId)]:SetAlpha(0.4)
     pcdFiltersFrame.CheckButtons[1][GetFilterIndexFromSpellId(spellId)]:SetChecked(nil)
-    logIfLevel(2, "should be alpha'ed now (")
+    logIfLevel(2, "resetting globals for " .. spellId .. " and " .. charName)
     PcdDb[charName]["filters"]["global"] = "x"
     PcdDb["settings"]["filters"][spellId] = "x"
-    for i = 2, #pcdFiltersFrame.CheckButtons[charIndex] do
-        local button = pcdFiltersFrame.CheckButtons[charIndex][i]
-        button:SetAlpha(1)
-    end
-    for i = 2, #pcdFiltersFrame.CheckButtons do
-        local button = pcdFiltersFrame.CheckButtons[i][GetFilterIndexFromSpellId(spellId)]
-        button:SetAlpha(1)
-    end
-
 end
 
 function HandleGlobalCdClick(spellId, shouldCheck)
     local spellIndex = GetFilterIndexFromSpellId(spellId)
-    local xCheck = ""
-    if shouldCheck then xCheck = "true" else xCheck = "false" end
-    logIfLevel(2, spellId .. " set checked: " .. xCheck)
-    pcdFiltersFrame.CheckButtons[1][spellIndex]:SetAlpha(1)
+    PcdDb["settings"]["filters"][spellId] = shouldCheck
+    for charName in pairs(PcdDb) do
+        if not charName == "settings" then
+            PcdDb[charName]["filters"][spellId] = shouldShow
+        end
+    end
+    local checkValue
+    if shouldCheck == "n" then checkValue = nil else checkValue = true end
     local targetValue
-    local checkedValue
     for i = 2, #pcdFiltersFrame.CheckButtons do
         local button = pcdFiltersFrame.CheckButtons[i][spellIndex]
-        if button then
-            button:SetAlpha(0.4)
-        end
+        button:SetChecked(checkValue)
     end
 end
 
@@ -1058,47 +1048,10 @@ function HandleGlobalCharacterClick(charName, shouldCheck)
     local checkedValue
     if shouldCheck then targetValue = "y" else targetValue = "n" end
     if shouldCheck then checkedValue = true else checkedValue = nil end
-    pcdFiltersFrame.CheckButtons[charIndex][1]:SetAlpha(1)
     PcdDb[charName]["filters"]["global"] = targetValue
     for i = 2, #pcdFiltersFrame.CheckButtons[charIndex] do
         local button = pcdFiltersFrame.CheckButtons[charIndex][i]
         button:SetChecked(checkedValue)
-        button:SetAlpha(0.4)
-    end
-end
-
-function InitAlphas()
-    -- character globals
-    local chars = GetAllChars(false)
-    for charName, charData in pairs(chars) do
-        local charIndex = pcdFiltersFrame.CharIndices[charName]
-        local alphaValue
-        local button = pcdFiltersFrame.CheckButtons[charIndex][1]
-        if PcdDb[charName]["filters"]["global"] == "x" then alphaValue = 0 else alphaValue = 1 end
-        button:SetAlpha(alphaValue)
-        if alphaValue == 1 then
-            for i = 2, #pcdFiltersFrame.CheckButtons do
-                logIfLevel(1, "set " .. i .. ", " .. 1 .. " alpha for char globals to 0.4" .. alphaValue)
-                button = pcdFiltersFrame.CheckButtons[i][1]
-                button:SetAlpha(0.4)
-            end
-        end
-    end
-    -- cooldown globals
-    for spellIndex = 2, NumberOfActivePcdCds do
-        local alphaValue
-        local spellId = GetSpellIdFromIndex(spellIndex)
-        local spellName = GetCdNameFromSpellId(spellId)
-        if PcdDb["settings"]["filters"][spellId] == "x" then alphaValue = 0.4 else alphaValue = 1 end
-        logIfLevel(1, "alpha is " .. alphaValue .. " for " .. spellName .. " with index " .. spellIndex)
-        pcdFiltersFrame.CheckButtons[1][spellIndex]:SetAlpha(alphaValue)
-        if alphaValue == 1 then
-            for charIndex = 2, #pcdFiltersFrame.CheckButtons do
-                logIfLevel(1, "set " .. charIndex .. ", " .. spellIndex .. " alpha for cd globals")
-                local button = pcdFiltersFrame.CheckButtons[charIndex][spellIndex]
-                button:SetAlpha(0.4)
-            end
-        end
     end
 end
 
@@ -1112,14 +1065,33 @@ function CamelCase(str)
      return str
 end
 
-function SetShouldShowGlobal(spellId, shouldShow)
+function SetShouldShowGlobalSpell(spellId, shouldShow)
     PcdDb["settings"]["filters"][spellId] = shouldShow
+
+    for charName in pairs(PcdDb) do
+        if not charName == "settings" 
+            and PcdDb[charName]["filters"] 
+            and IsNotNullTable(PcdDb[charName]["filters"]) then
+            PcdDb[charName]["filters"][spellId] = shouldShow
+        end
+    end
 end
 
-function SetShouldShowProf(charName, spellId, shouldShow)
-    PcdDb[charName]["filters"][spellId] = shouldShow
-    PcdDb[charName]["filters"]["global"] = "x"
-    PcdDb["settings"]["filters"][spellId] = "x"
+function SetShouldShowCdForChar(charName, spellId, shouldShow)
+    if spellId == "global" then
+        PcdDb[charName]["filters"][spellId] = shouldShow
+        if PcdDb[charName]["filters"] and IsNotNullTable(PcdDb[charName]["filters"]) then
+            for k, v in pairs(PcdDb[charName]["filters"]) do
+                if not PcdDb[charName]["filters"][spellId] then
+                    PcdDb[charName]["filters"][k] = shouldShow
+                end
+            end
+        end
+    else
+        PcdDb[charName]["filters"][spellId] = shouldShow
+        PcdDb[charName]["filters"]["global"] = "x"
+        PcdDb["settings"]["filters"][spellId] = "x"
+    end
 end
 
 function ShouldShowProf(charName, spellId)
@@ -1132,7 +1104,7 @@ function ShouldShowProf(charName, spellId)
     -- char specific filter is not no
     -- char has profession
     if (globalVal == "y" or charGlobalVal == "y") then return true
-    elseif globalVal == "n" or charGlobalVal == "n" or specificVal == "n" then return false
+    elseif globalVal == "n" or charGlobalVal == "n" then return false
     else return specificVal == "y" end
 end
 
