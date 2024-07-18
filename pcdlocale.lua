@@ -58,7 +58,9 @@ local inscription = "incscription"
 local mining = "mining"
 pcdLootCreated = "You create"
 pcdLearnedRecipe = "You have learned"
+pcdReceiveItem = "You receive item"
 
+-- see https://github.com/tekkub/wow-globalstrings
 PCDL = {
     ["enUS"] = {
         [alchemy] = alchemy,
@@ -70,6 +72,7 @@ PCDL = {
         [mining] = mining,
         [pcdLootCreated] = pcdLootCreated,
         [pcdLearnedRecipe] = pcdLearnedRecipe,
+        [pcdReceiveItem] = pcdReceiveItem
     },
     ["deDE"] = {
         ["alchemie"] = alchemy,
@@ -81,6 +84,7 @@ PCDL = {
         ["bergbau"] = mining,
         [pcdLootCreated] = "Ihr stellt her",
         [pcdLearnedRecipe] = "Ihr habt gelernt",
+        [pcdReceiveItem] = "Ihr bekommt einen Gegenstand:"
     },
     ["esES"] = {
         ["alquimia"] = alchemy,
@@ -92,6 +96,7 @@ PCDL = {
         ["minería"] = mining,
         [pcdLootCreated] = "Creas",
         [pcdLearnedRecipe] = "Has aprendido",
+        [pcdReceiveItem] = "Recibes:"
     },
     ["esMX"] = {
         ["alquimia"] = alchemy,
@@ -103,6 +108,7 @@ PCDL = {
         ["minería"] = mining,
         [pcdLootCreated] = "Creas",
         [pcdLearnedRecipe] = "Has aprendido",
+        [pcdReceiveItem] = "Recibes:"
     },
     ["frFR"] = {
         ["alchimie"] = alchemy,
@@ -114,6 +120,7 @@ PCDL = {
         ["minage"] = mining,
         [pcdLootCreated] = "Vous créez",
         [pcdLearnedRecipe] = "Vous avez appris ",
+        [pcdReceiveItem] = "Vous recevez l'objet"
     },
     ["itIT"] = {
         ["alchimia"] = alchemy,
@@ -125,28 +132,7 @@ PCDL = {
         ["estrazione"] = mining,
         [pcdLootCreated] = "Hai creato",
         [pcdLearnedRecipe] = "Hai imparato",
-    },
-    ["ptBR"] = {
-        ["alquimia"] = alchemy,
-        ["joalheria"] = jewelcrafting,
-        ["couraria"] = leatherworking,
-        ["alfaiataria"] = tailoring,
-        ["encantamento"] = enchanting,
-        ["escrivania"] = inscription,
-        ["mineração"] = mining,
-        [pcdLootCreated] = "Você cria",
-        [pcdLearnedRecipe] = "Você aprendeu",
-    },
-    ["ruRU"] = {
-        ["алхимия"] = alchemy,
-        ["ювелирное дело"] = jewelcrafting,
-        ["кожевничество"] = leatherworking,
-        ["портняжное дело"] = tailoring,
-        ["наложение чар"] = enchanting,
-        ["начертание"] = inscription,
-        ["горное дело"] = mining,
-        [pcdLootCreated] = "Вы создаете",
-        [pcdLearnedRecipe] = "Вы научились создавать",
+        [pcdReceiveItem] = "Hai ricevuto:"
     },
     ["koKR"] = {
         ["연금술"] = alchemy,
@@ -158,6 +144,31 @@ PCDL = {
         ["채광"] = mining,
         [pcdLootCreated] = "만들었습니다",
         [pcdLearnedRecipe] = "익혔습니다",
+        [pcdReceiveItem] = "아이템을 획득했습니다:"
+    },
+    ["ptBR"] = {
+        ["alquimia"] = alchemy,
+        ["joalheria"] = jewelcrafting,
+        ["couraria"] = leatherworking,
+        ["alfaiataria"] = tailoring,
+        ["encantamento"] = enchanting,
+        ["escrivania"] = inscription,
+        ["mineração"] = mining,
+        [pcdLootCreated] = "Você cria",
+        [pcdLearnedRecipe] = "Você aprendeu",
+        [pcdReceiveItem] = "Você recebe o item:"
+    },
+    ["ruRU"] = {
+        ["алхимия"] = alchemy,
+        ["ювелирное дело"] = jewelcrafting,
+        ["кожевничество"] = leatherworking,
+        ["портняжное дело"] = tailoring,
+        ["наложение чар"] = enchanting,
+        ["начертание"] = inscription,
+        ["горное дело"] = mining,
+        [pcdLootCreated] = "Вы создаете",
+        [pcdLearnedRecipe] = "Вы научились создавать",
+        [pcdReceiveItem] = "Вы получаете предмет:"
     },
     ["zhCN"] = {
         ["炼金术"] = alchemy,
@@ -169,6 +180,7 @@ PCDL = {
         ["采矿"] = mining,
         [pcdLootCreated] = "你制造了",
         [pcdLearnedRecipe] = "你已经学会了",
+        [pcdReceiveItem] = "你获得了物品"
     },
     ["zhTW"] = {
         ["鍊金術"] = alchemy,
@@ -180,6 +192,7 @@ PCDL = {
         ["採礦"] = mining,
         [pcdLootCreated] = "你製造了",
         [pcdLearnedRecipe] = "你已經學會了",
+        [pcdReceiveItem] = "你獲得了物品"
     }
 }
 

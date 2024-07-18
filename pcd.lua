@@ -73,14 +73,21 @@ lootMsgFrame:RegisterEvent("CHAT_MSG_SYSTEM")
 lootMsgFrame:SetScript("OnEvent", function(self, event, arg1, arg2)
     if event == "CHAT_MSG_LOOT" then
         local createMessage = PCDL[userLocale][pcdLootCreated]
-        local learnedMessage = PCDL[userLocale][pcdLearnedRecipe]
-        if (arg1:find(createMessage) ~= nil or arg1:find(pcdLearnedRecipe)) then
-            UpdateAndRepaintIfOpen()
+        local receivedMessage = PCDL[userLocale][pcdReceiveItem]
+        if (arg1:find(createMessage) ~= nil or arg1:find(receivedMessage) ~= nil) then
             logIfLevel(2, "Creation message event fired. Calling update at: ")
             logIfLevel(1, GetTime())
+            UpdateAndRepaintIfOpen()
+        else
+            local msg
+            if arg1 then msg = arg1 else msg = "nil" end
+            logIfLevel(2, "Creation message event fired. Update not called with " .. msg)
         end
-    elseif event == "CHAT_MSG_SYSTEM" and arg1:find("^You have learned") ~= nil then
-        UpdateAndRepaintIfOpen()
+    elseif event == "CHAT_MSG_SYSTEM" then
+        local learnedMessage = PCDL[userLocale][pcdLearnedRecipe]
+        if arg1:find(learnedMessage) ~= nil then
+            UpdateAndRepaintIfOpen()
+        end
     end
 end)
 
