@@ -254,7 +254,16 @@ function SetCooldownTo(spellId, professionName, timestamp)
     if not PcdDb[charName]["professions"][professionName]["cooldowns"] or not type(PcdDb[charName]["professions"][professionName]["cooldowns"]) == "table" then
         PcdDb[charName]["professions"][professionName]["cooldowns"] = {}
     end
-    PcdDb[charName]["professions"][professionName]["cooldowns"][spellId] = timestamp
+    if (IsCataOrLater()) then
+        -- since cata cds always reset at server reset, round down to nearest server reset
+        local timeDiff = timestamp - GetServerTime()
+        local dayDiffFloored = math.floor(timeDiff / 86400)
+        local resetTime = dayDiffFloored * 86400 + GetQuestResetTime() + GetServerTime()
+
+        PcdDb[charName]["professions"][professionName]["cooldowns"][spellId] = resetTime
+    else
+        PcdDb[charName]["professions"][professionName]["cooldowns"][spellId] = timestamp
+    end
     logIfLevel(1, "set cooldown timestamp of " .. spellId .. " to " .. PcdDb[charName]["professions"][professionName]["cooldowns"][spellId])
 end
 
