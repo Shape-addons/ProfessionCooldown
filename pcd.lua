@@ -202,7 +202,7 @@ function GetCooldownsFromSpellIds()
             if inscriptionSkill >= 500 then
                 local forgedDocsCd = GetLargestCd({forgedDocumentsHordeId, forgedDocumentsAllianceId})
                 if forgedDocsCd > 0 then
-                    SetCooldownTo("forged documents", "inscription", forgedDocsCd)
+                    SetCooldownTo(forgedDocumentsId, "inscription", forgedDocsCd)
                 end
             end
         end
