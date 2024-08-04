@@ -1017,6 +1017,8 @@ function CreateCheckButtonForCharacterFilter(index, frame, charName, spellId, sp
     frame.CheckButtons[index][spellIndex]:SetScript("OnClick", 
         function()
             local isChecked = frame.CheckButtons[index][spellIndex]:GetChecked()
+            local shouldCheckValue
+            if isChecked then shouldCheckValue = "y" else shouldCheckValue = "n" end
             if (isChecked) then
                 frame.CheckButtons[index][spellIndex]:SetChecked(true)
                 SetShouldShowCdForChar(charName, spellId, "y")
@@ -1025,7 +1027,7 @@ function CreateCheckButtonForCharacterFilter(index, frame, charName, spellId, sp
                 SetShouldShowCdForChar(charName, spellId, "n")
             end
             if spellIndex == 1 then HandleGlobalCharacterClick(charName, isChecked)
-            else HandleSpecificClick(charName, spellId, isChecked) end
+            else HandleSpecificClick(charName, spellId, shouldCheckValue) end
 
             logIfLevel(2, "index: " .. index .. ", char: " .. charName .. ", spell: " .. spellId .. " spellindex: " .. spellIndex)
             UpdateAndRepaintIfOpen()
@@ -1037,6 +1039,7 @@ function HandleSpecificClick(charName, spellId, shouldCheck)
     pcdFiltersFrame.CheckButtons[charIndex][1]:SetChecked(nil)
     pcdFiltersFrame.CheckButtons[1][GetFilterIndexFromSpellId(spellId)]:SetChecked(nil)
     logIfLevel(2, "resetting globals for " .. spellId .. " and " .. charName)
+    PcdDb[charName]["filters"][spellId] = shouldCheck
     PcdDb[charName]["filters"]["global"] = "x"
     PcdDb["settings"]["filters"][spellId] = "x"
 end
@@ -1045,7 +1048,7 @@ function HandleGlobalCdClick(spellId, shouldCheck)
     local spellIndex = GetFilterIndexFromSpellId(spellId)
     PcdDb["settings"]["filters"][spellId] = shouldCheck
     for charName in pairs(PcdDb) do
-        if not charName == "settings" then
+        if not charName == "settings" then  
             PcdDb[charName]["filters"][spellId] = shouldShow
         end
     end
@@ -1088,7 +1091,10 @@ function SetShouldShowGlobalSpell(spellId, shouldShow)
         if not charName == "settings" 
             and PcdDb[charName]["filters"] 
             and IsNotNullTable(PcdDb[charName]["filters"]) then
-            PcdDb[charName]["filters"][spellId] = shouldShow
+
+            if not PcdDb[charName]["filters"]["global"] == "y" then
+                PcdDb[charName]["filters"][spellId] = shouldShow
+            end
         end
     end
 end
@@ -1332,13 +1338,13 @@ function CreateBroker()
 		end,
 		OnTooltipShow = function(tooltip)
             logIfLevel(1, "Update triggered from OnTooltipShow")
-            UpdateCds()
+            UpdateAndRepaintIfOpen()
 			doUpdateMinimapButton = true;
 			UpdateMinimapButton(tooltip, doUpdateMinimapButton);
 		end,
 		OnEnter = function(self, button)
             logIfLevel(1, "Update triggered from OnEnter")
-            UpdateCds()
+            UpdateAndRepaintIfOpen()
 			GameTooltip:SetOwner(self, "ANCHOR_NONE")
 			GameTooltip:SetPoint("TOPLEFT", self, "BOTTOMLEFT")
 			doUpdateMinimapButton = true;
