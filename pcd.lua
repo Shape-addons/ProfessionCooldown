@@ -221,7 +221,7 @@ function GetLargestCd(idList)
     local bestId = -1
     for i = 1, #idList do
         local timestamp = GetCooldownTimestamp(idList[i])
-        if timestamp > best and idList[i] > 0 then
+        if timestamp and timestamp > best and idList[i] > 0 then
             best = timestamp
             bestId = idList[i]
         end
@@ -235,7 +235,7 @@ function GetTransmuteCd()
     local bestId = -1
     for i = 1, #allTransmuteIds do
         local timestamp = GetCooldownTimestamp(allTransmuteIds[i])
-        if timestamp > best then
+        if timestamp and timestamp > best then
             best = timestamp
             bestId = allTransmuteIds[i]
         end
@@ -246,7 +246,10 @@ end
 
 function SetCooldownForSpell(cdName, professionName, spellId)
     local timestamp = GetCooldownTimestamp(spellId)
-    SetCooldownTo(spellId, professionName, timestamp)
+    if timestamp then
+        SetCooldownTo(spellId, professionName, timestamp)
+    end
+    logIfLevel(2, "did not set timestamp for " .. spellId .. " because the timestamp was nil")
 end
 
 function SetCooldownTo(spellId, professionName, timestamp)
@@ -301,6 +304,7 @@ function UpdateCharacterProfessionDb()
         if (profs[j]) then
             if not PcdDb[charName]["professions"][profs[j].profName] then
                 PcdDb[charName]["professions"][profs[j].profName] = {}
+                logIfLevel(2, "added/cleared " .. profs[j].profName)
             end
             PcdDb[charName]["professions"][profs[j].profName]["skill"] = profs[j].skillLevel
             logIfLevel (2, "Updated prof for  " .. charName .. ": " .. profs[j].profName .. ", " .. profs[j].skillLevel)
@@ -743,6 +747,14 @@ function GetFilterIndexFromSpellId(spellId)
     end
 end
 
+function GetCharNameFromIndex(index)
+    for name, charIndex in pairs(pcdFiltersFrame.CharIndices) do
+        if index == charIndex then
+            return name
+        end
+    end
+end
+
 function GetSpellIdFromIndex(index)
     if index == 1 then return "global"
     else 
@@ -1056,8 +1068,15 @@ function HandleGlobalCdClick(spellId, shouldCheck)
     if shouldCheck == "n" then checkValue = nil else checkValue = true end
     local targetValue
     for i = 2, #pcdFiltersFrame.CheckButtons do
-        local button = pcdFiltersFrame.CheckButtons[i][spellIndex]
-        button:SetChecked(checkValue)
+        -- don't overwrite value if global filter is defined on character level
+        local charName = GetCharNameFromIndex(i)
+        if PcdDb[charName]["filters"]["global"] ~= "y" then
+            local button = pcdFiltersFrame.CheckButtons[i][spellIndex]
+            button:SetChecked(checkValue)
+            PcdDb[charName]["filters"][spellId] = shouldCheck
+        else
+            logIfLevel(2, "did not set " .. spellId .. " to " .. shouldCheck .. " because char index " .. i .. " was not y")
+        end
     end
 end
 
@@ -1069,14 +1088,21 @@ function HandleGlobalCharacterClick(charName, shouldCheck)
     if shouldCheck then checkedValue = true else checkedValue = nil end
     PcdDb[charName]["filters"]["global"] = targetValue
     for i = 2, #pcdFiltersFrame.CheckButtons[charIndex] do
-        local button = pcdFiltersFrame.CheckButtons[charIndex][i]
-        button:SetChecked(checkedValue)
+        -- don't overwrite value if global filter is defined on spell level
+        local spellId = GetSpellIdFromIndex(i)
+        if PcdDb["settings"]["filters"][spellId] ~= "y" then
+            local button = pcdFiltersFrame.CheckButtons[charIndex][i]
+            button:SetChecked(checkedValue)
+            PcdDb[charName]["filters"][spellId] = targetValue
+        else
+            logIfLevel(2, "did not set " .. spellId .. " to " .. targetValue .. " because global spellId filter " .. i .. " was not y")
+        end
     end
 end
 
 function CamelCase(str)
     -- TODO: remove hack avoiding index error for non string.
-    str = str .. " "
+    if str == nil then str = " " end
     local function tchelper(first, rest)
         return first:upper()..rest:lower()
      end
