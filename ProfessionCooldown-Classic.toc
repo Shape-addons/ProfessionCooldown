@@ -11,3 +11,4 @@ pcdlocale.lua
 pcdCore.lua
 pcdFilters.lua
 pcd.lua
+pcdNotifications.lua
