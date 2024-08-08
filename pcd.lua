@@ -40,7 +40,7 @@ profCdTrackerFrame:SetScript("OnEvent", function(self, event, arg1, ...)
             pcdShowMinimapButton = true
             logIfLevel(2, "show mini map button set to true")
         end
-        UpdateCds()
+        UpdateAndRepaintIfOpen()
         CreateBroker()
         if PcdDb and PcdDb["settings"] and not (PcdDb["settings"]["ShowOnLogin"] == "n") then
             pcdShowOnLogin = true
