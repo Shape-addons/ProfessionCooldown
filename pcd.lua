@@ -246,13 +246,19 @@ end
 
 function SetCooldownForSpell(cdName, professionName, spellId)
     local timestamp = GetCooldownTimestamp(spellId)
-    if timestamp then
-        SetCooldownTo(spellId, professionName, timestamp)
-    end
-    logIfLevel(2, "did not set timestamp for " .. spellId .. " because the timestamp was nil")
+    SetCooldownTo(spellId, professionName, timestamp)
 end
 
 function SetCooldownTo(spellId, professionName, timestamp)
+    if not timestamp then
+        logIfLevel(2, "did not set timestamp for " .. spellId .. " because the timestamp was nil")
+        return
+    end
+    if timestamp < GetServerTime() then
+        logIfLevel(2, "did not set timestamp for " .. spellId .. " because the timestamp was in the past")
+        return
+    end
+
     local charName = GetCharAndRealm()
     if not PcdDb[charName]["professions"][professionName]["cooldowns"] or not type(PcdDb[charName]["professions"][professionName]["cooldowns"]) == "table" then
         PcdDb[charName]["professions"][professionName]["cooldowns"] = {}
@@ -264,8 +270,10 @@ function SetCooldownTo(spellId, professionName, timestamp)
         local resetTime = dayDiffFloored * 86400 + GetQuestResetTime() + GetServerTime()
 
         PcdDb[charName]["professions"][professionName]["cooldowns"][spellId] = resetTime
+        logIfLevel(2, "setting " .. spellId .. " to " .. GetCooldownText(resetTime).text .. " (cata)")
     else
         PcdDb[charName]["professions"][professionName]["cooldowns"][spellId] = timestamp
+        logIfLevel(2, "setting " .. spellId .. " to " .. GetCooldownText(timestamp).text)
     end
     logIfLevel(1, "set cooldown timestamp of " .. spellId .. " to " .. PcdDb[charName]["professions"][professionName]["cooldowns"][spellId])
 end
