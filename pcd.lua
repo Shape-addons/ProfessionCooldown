@@ -28,6 +28,24 @@ profCdTrackerFrame:RegisterEvent("TRADE_SKILL_UPDATE")
 profCdTrackerFrame:RegisterEvent("TRADE_SKILL_CLOSE")
 profCdTrackerFrame:RegisterEvent("ADDON_LOADED")
 
+local mmapData = nil
+function UpdateColorOfIconAndLDBString()
+    local color = GetColorOfLowestCd()
+    if not color then color = NOT_READY end
+
+    if mmapData then
+        mmapData.label = RGBATableToColorString(color, "PCD")
+        mmapData.text = PCD_CdCountLabelStrings()
+    end
+    if pcdShowMinimapButton then
+        local mmapButton = PCDLDBIcon:GetMinimapButton("PCD")
+        if mmapButton then
+            mmapButton.icon:SetVertexColor(color[1], color[2], color[3])
+            mmapButton:Show()
+        end
+    end
+end
+
 profCdTrackerFrame:SetScript("OnEvent", function(self, event, arg1, ...)
     if (event == "TRADE_SKILL_SHOW" or event == "TRADE_SKILL_UPDATE" or event == "TRADE_SKILL_CLOSE") then
         UpdateAndRepaintIfOpen()
@@ -41,7 +59,8 @@ profCdTrackerFrame:SetScript("OnEvent", function(self, event, arg1, ...)
             logIfLevel(2, "show mini map button set to true")
         end
         UpdateAndRepaintIfOpen()
-        CreateBroker()
+        mmapData = CreateBroker()
+        UpdateColorOfIconAndLDBString()
         if PcdDb and PcdDb["settings"] and not (PcdDb["settings"]["ShowOnLogin"] == "n") then
             pcdShowOnLogin = true
             CreatePCDFrame()
@@ -50,8 +69,93 @@ profCdTrackerFrame:SetScript("OnEvent", function(self, event, arg1, ...)
     end
 end)
 
+function RGBAtoColorString(r, g, b, a, text)
+    -- Convert each component to hexadecimal
+    local hexA = string.format("%02X", a * 255)
+    local hexR = string.format("%02X", r * 255)
+    local hexG = string.format("%02X", g * 255)
+    local hexB = string.format("%02X", b * 255)
+
+    -- Concatenate into the |c string
+    local colorString = "|c" .. hexA .. hexR .. hexG .. hexB .. text .. "|r"
+
+    return colorString
+end
+
+function RGBATableToColorString(t, text) 
+    local hexR = string.format("%02X", t[1] * 255)
+    local hexG = string.format("%02X", t[2] * 255)
+    local hexB = string.format("%02X", t[3] * 255)
+    local hexA = string.format("%02X", t[4] * 255)
+    local colorString = "|c" .. hexA .. hexR .. hexG .. hexB .. text .. "|r"
+
+    return colorString
+end
+
+function GetProfessionCdsOrderedByTimeLeft()
+    charNameSpellIdRemaining = GetAllNamesAndCdsOnAccount(true)
+    table.sort(charNameSpellIdRemaining, function (lhs, rhs) return lhs[3] < rhs[3] end)
+    return charNameSpellIdRemaining
+end
+
+function GetColorOfLowestCd()
+    local charNameSpellIdRemaining = GetProfessionCdsOrderedByTimeLeft()
+    for k, v in pairs(charNameSpellIdRemaining) do
+        if ShouldShowProf(v[1], v[2]) then
+            local cdTextTable = GetCooldownText(v[3])
+            return cdTextTable.color
+        end
+    end
+end
+
+function GetCdCountsInTimeCategories()
+    local charNameSpellIdRemaining = GetProfessionCdsOrderedByTimeLeft()
+    cdCategoryCounts = {
+        [1] = 0,
+        [2] = 0,
+        [3] = 0,
+        [4] = 0,
+        [5] = 0,
+    }
+    for k, v in pairs(charNameSpellIdRemaining) do
+        if ShouldShowProf(v[1], v[2]) then
+            local category = GetCdTimeCategory(v[3])
+            cdCategoryCounts[category] = cdCategoryCounts[category] + 1
+        end
+    end
+    return cdCategoryCounts
+end
+
+function PCD_CdCountLabelStrings()
+    text = nil
+    local map = GetCdCountsInTimeCategories()
+    for i= 1,5,1 do 
+        if map[i] > 0 then 
+            color = TimeCategoryToColorMap[i]
+            coloredCount = RGBATableToColorString(color, map[i])
+            if text then text = text .. "/" .. coloredCount
+            else text = coloredCount end
+        end
+    end
+    return text
+end
+
+function NotifyCdsAsText()
+    local charNameSpellIdRemaining = GetProfessionCdsOrderedByTimeLeft()
+    for k, v in pairs(charNameSpellIdRemaining) do
+        if ShouldShowProf(v[1], v[2]) then
+            local charSpellText = CreateCharSpellText(v[1], GetCdNameFromSpellId(v[2]))
+            local cdTextTable = GetCooldownText(v[3])
+            local cdText = RGBATableToColorString(cdTextTable.color, cdTextTable.text)
+            local tt = CreateCharSpellText(v[1], GetCdNameFromSpellId(v[2])) .. " - " .. cdText
+            print (tt)
+        end
+    end
+end
+
 function UpdateAndRepaintIfOpen()
     UpdateCds()
+    UpdateColorOfIconAndLDBString()
     RepaintIfOpen()
 end
 
@@ -365,6 +469,9 @@ function InitDbTable()
     if (not PcdDb["settings"]["CloseOnEscape"]) then
         PcdDb["settings"]["CloseOnEscape"] = "y"
     end
+    if not PcdDb["settings"]["positions"] then
+        PcdDb["settings"]["positions"] = {}
+    end
     if (not PcdDb["settings"]["filters"]) then
         PcdDb["settings"]["filters"] = {}
     end
@@ -380,15 +487,36 @@ function InitDbTable()
     end
 end
 
-function RegisterFrameForDrag(theFrame, savePos)
+function RegisterFrameForDrag(theFrame, savePos, name)
     theFrame:SetMovable(true)
     theFrame:EnableMouse(true)
 
     theFrame:RegisterForDrag("LeftButton")
-    theFrame:SetScript("OnDragStart", theFrame.StartMoving)
+    theFrame:SetScript("OnDragStart", function(self)
+        self:StartMoving()
+        
+        -- if IsControlKeyDown() or IsShiftKeyDown() or IsAltKeyDown() then
+        --     self:StartMoving()
+        -- end
+    end)
     if (not theFrame.StopMovingFunc) then
         if (savePos) then
-            theFrame.StopMovingFunc = SavePositionAndStopMoving
+            theFrame.StopMovingFunc = function (self)
+                self:StopMovingOrSizing()
+                local point, relativeTo, relativePoint, xOfs, yOfs = self:GetPoint(1)
+                if not PcdDb["settings"] then
+                    PcdDb["settings"] = {}
+                end
+                if not PcdDb["settings"]["positions"] then
+                    PcdDb["settings"]["positions"] = {}
+                end
+                PcdDb["settings"]["positions"][name] = {
+                    ["Point"] = point,
+                    ["RelativePoint"] = relativePoint,
+                    ["XOfs"] = xOfs,
+                    ["YOfs"] = yOfs
+                }
+            end
         else
             theFrame.StopMovingFunc = theFrame.StopMovingOrSizing
         end
@@ -402,7 +530,10 @@ function SavePositionAndStopMoving(self)
     if not PcdDb["settings"] then
         PcdDb["settings"] = {}
     end
-    PcdDb["settings"]["position"] = {
+    if not PcdDb["settings"]["positions"] then
+        PcdDb["settings"]["positions"] = {}
+    end
+    PcdDb["settings"]["positions"] = {
         ["Point"] = point,
         ["RelativePoint"] = relativePoint,
         ["XOfs"] = xOfs,
@@ -451,7 +582,7 @@ function AddTextWithCDToFrame(theFrame, charAndRealm, cdText, rightText, positio
     nameFont:SetPoint("TOPLEFT", 10, actualPosition)
     nameFont:SetFont("Fonts\\FRIZQT__.ttf", pcdSettings.entrySize, "OUTLINE")
     local cColorString = GetClassColorString(charAndRealm)
-    nameFont:SetText(cColorString .. charName .. STD_WHITE .. " - " .. CamelCase(cdText))
+    nameFont:SetText(cColorString .. charName .. STD_WHITE .. " - " .. RGBATableToColorString(cdColor, CamelCase(cdText)))
 
     cdFont:SetFontObject("GameFontHighlight")
     cdFont:SetText(rightText)
@@ -463,7 +594,7 @@ function AddTextWithCDToFrame(theFrame, charAndRealm, cdText, rightText, positio
     cdFont:Show()
 end
 
-function GetAllNamesAndCdsOnAccount()
+function GetAllNamesAndCdsOnAccount(excludeNotShown)
     local charSpellAndCd = {}
     local allOnAccount = PcdDb
     if (not allOnAccount) then
@@ -491,7 +622,18 @@ function GetAllNamesAndCdsOnAccount()
             end
         end
     end
-    return charSpellAndCd
+
+    if excludeNotShown then
+        local charNameSpellIdRemaining = {}
+        for k, v in pairs(charSpellAndCd) do
+            if ShouldShowProf(v[1], v[2]) then
+                table.insert(charNameSpellIdRemaining, v)
+            end
+        end
+        return charNameSpellIdRemaining
+    else
+        return charSpellAndCd
+    end
 end
 
 pcdOptionsFrame = CreateFrame("Frame", "PcdOptionsFrame", UIParent)
@@ -625,12 +767,22 @@ function CreatePcdOptionsFrame()
     pcdOptionsFrame.CloseOnEscape.tooltip = "If checked, Pcd frames will close when hitting the escape key"
     pcdOptionsFrame.ShowOnLogin.tooltip = "Does not work with close on escape"
     SetFrameTitle(pcdOptionsFrame, "PCD options")
-    RegisterFrameForDrag(pcdOptionsFrame, false)
+    RegisterFrameForDrag(pcdOptionsFrame, false, "options")
     AddBorderToFrame(pcdOptionsFrame)
 
     pcdOptionsFrame:Show()
     pcdOptionsFrame:SetPoint("CENTER", UIParent, "CENTER")
     pcdOptionsFrame:SetSize(400, 110)
+end
+
+function SetSavedPositionOrCenter(frame, frameName)
+    local pos = PcdDb["settings"]["positions"][frameName]
+    if pos and pos then 
+        local pos = PcdDb["settings"]["positions"][frameName]
+        frame:SetPoint(pos["Point"], UIParent, pos["RelativePoint"], pos["XOfs"], pos["YOfs"])
+    else
+        frame:SetPoint("CENTER", UIParent, "CENTER")
+    end
 end
 
 pcdFrame = CreateFrame("Frame", "PCDOverviewFrame", UIParent)
@@ -645,18 +797,13 @@ function CreatePCDFrame()
     pcdFrame.close:SetPoint("TOPRIGHT")
     pcdFrame.close:SetScript("OnClick", function(self) self:GetParent():Hide(); end)
     
-    if PcdDb and PcdDb["settings"] and PcdDb["settings"]["position"] and next(PcdDb["settings"]["position"]) then
-        local pos = PcdDb["settings"]["position"]
-        pcdFrame:SetPoint(pos["Point"], UIParent, pos["RelativePoint"], pos["XOfs"], pos["YOfs"])
-    else
-        pcdFrame:SetPoint("CENTER", UIParent, "CENTER")
-    end
+    SetSavedPositionOrCenter(pcdFrame, "overview")
 
     if PcdDb and PcdDb["settings"] and PcdDb["settings"]["CloseOnEscape"] == "y" then
         EnableCloseOnEscape(false, true)
     end
-    SetFrameTitle(pcdFrame, "Profession CD Tracker")
-    RegisterFrameForDrag(pcdFrame, true)
+    SetFrameTitle(pcdFrame, "PCD Overview")
+    RegisterFrameForDrag(pcdFrame, true, "overview")
     local charSpellAndCd = GetAllNamesAndCdsOnAccount()
     local sortedProfData = {}
     for i = 1, #charSpellAndCd do
@@ -683,7 +830,7 @@ function CreatePCDFrame()
         end
     end
     local frameHeight = 50 + 17 * printedItemCount
-    pcdFrame:SetSize(350,frameHeight)
+    pcdFrame:SetSize(250,frameHeight)
     AddBorderToFrame(pcdFrame)
     pcdFrame:Show()
     logIfLevel (1, "PCD frame created")
@@ -729,7 +876,7 @@ function CreatePcdFiltersFrame()
         EnableCloseOnEscape(false, true)
     end
     SetFrameTitle(pcdFiltersFrame, "Profession CD Filters")
-    RegisterFrameForDrag(pcdFiltersFrame, false)
+    RegisterFrameForDrag(pcdFiltersFrame, false, "filters")
     AddBorderToFrame(pcdFiltersFrame)
     pcdFiltersFrame:Show()
     pcdFiltersFrame:SetPoint("CENTER", UIParent, "CENTER")
@@ -737,8 +884,6 @@ function CreatePcdFiltersFrame()
 end
 
 function GetFilterIndexFromSpellId(spellId)
-    -- /script print(GetFilterIndexFromSpellId(northrendAlchemyId))
-    -- /script print(GetFilterIndexFromSpellId(transmuteId))
     if spellId == "global" then return 1 end
     for x, id in pairs(GetSortedProfessions()) do
         if spellId == id then
@@ -805,13 +950,17 @@ function AddIconToFiltersFrame(index, itemId, spellId)
     return AddIconToFrame(pcdFiltersFrame, "TOPLEFT", posX, -50, 28, 28, myIcon, spellId)
 end
 
-local createBorder = function(self, spellId, point)
-	local bc = self.pcdGlow
+local createBorderFromSpellId = function(self, spellId, point, size)
     local r, g, b = GetSpellColorFromSpellId(spellId)
-        if not r then
-            return nil
-        end
-	if(not bc) then
+    if not r then
+        return nil
+    end
+    return createBorder(self, r, g, b, point, size)
+end
+
+function createBorder(self, r, g, b, point, size)
+    local bc = self.pcdGlow
+    if(not bc) then
 		if(not self:IsObjectType'Frame') then
 			bc = self:GetParent():CreateTexture(nil, 'BACKGROUND')
 		else
@@ -822,22 +971,21 @@ local createBorder = function(self, spellId, point)
 		bc:SetBlendMode"ADD"
 		-- bc:SetAlpha(.8)
         bc:SetColorTexture(r,g,b,1)
-		bc:SetWidth(33)
-		bc:SetHeight(33)
+		bc:SetWidth(size)
+		bc:SetHeight(size)
 
 		bc:SetPoint("CENTER", point or self)
 		self.pcdGlow = bc
 	end
-
-	return bc
 end
 
-function AddIconToFrame(frame, pos, posX, posY, width, height, icon, spellId) 
+function AddIconToFrame(frame, pos, posX, posY, width, height, icon, spellId, iconFrame) 
     -- local iconFrame = frame:CreateTexture(icon, "BORDER")
     -- add in spell id
-    local iconFrame = CreateFrame("Frame", "BorderFrame" .. icon, frame)
+    -- todo: reuse frames.
+    if not iconFrame then iconFrame =  CreateFrame("Frame", "BorderFrame" .. icon, frame) end
     
-    createBorder(iconFrame, spellId)
+    createBorderFromSpellId(iconFrame, spellId, nil, 33)
     -- BorderFrameIconLolBg:SetGradient("VERTICAL", CreateColor(0, 0, 0, 0), CreateColor(1, 1, 1, 0))
     iconFrame:SetWidth(width)
     iconFrame:SetHeight(height)
@@ -914,7 +1062,7 @@ function CreateNameTextForFilter(index, frame, charAndRealm)
     local charName = nil
     if charAndRealm == "global" then charName = "global" else charName = GetTextBefore(charAndRealm, ":") end
     if not frame.CharNames[index] then
-        frame.CharNames[index] = AddTextToFrame(frame, cColorString .. CamelCase(charName), "TOPLEFT", 20, (index - 1) * -20 - 95)
+        frame.CharNames[index] = AddTextToFrame(frame, cColorString .. CamelCase(charName), "TOPLEFT", 20, (index - 1) * -20 - 90)
     else
         frame.CharNames[index]:SetText(cColorString .. CamelCase(charName))
     end
@@ -1267,16 +1415,17 @@ function DisableShowOnLogin(shouldPrint)
 end
 
 function ResetPosition()
-    if PcdDb["settings"] and PcdDb["settings"]["position"] then
-        PcdDb["settings"]["position"] = {}
+    if PcdDb["settings"] and PcdDb["settings"]["positions"]["overview"] then
+        PcdDb["settings"]["positions"] = {}
     end
+    UpdateAndRepaintIfOpen();
 end
 
 function PrintHelp()
     print("Profession Cooldown (PCD) tracks your profession cooldowns. type /pcd to toggle the main frame visibility.")
     print("Cooldowns are updated when you open or close the given profession. Cooldowns are only added to the list once they are on cooldown, but will show up after that.")
     print("Drag the window to change its position. Close it by clicking 'X' button or press the Escape key")
-    print ("/pcd update, triggers a manual update.")
+    print("/pcd update, triggers a manual update.")
     print("Type /pcd options to open options menu.")
     print("Type /pcd filters to set up filters")
 end
@@ -1332,11 +1481,23 @@ end
 
 local PCDLDB, doUpdateMinimapButton;
 function CreateBroker()
-    local data = {
-		type = "launcher",
+    pcdLdbData = {
+        type = "data source",
 		label = "PCD",
-		text = "Profession Cooldowns",
 		icon = "Interface\\Icons\\inv_misc_pocketwatch_01",
+        OnLoad = function(self)
+            self.registry = {
+                id = "PCD",
+                category = "Profession",
+                controlVariables = {
+                    ShowIcon = true,
+                    ShowLabelText = true,
+                    ShowRegularText = true,
+                    ShowColoredText = true,
+                    DisplayOnRightSide = true
+                },
+            };
+        end,
 		OnClick = function(self, button)
 			if (button == "LeftButton" and IsShiftKeyDown()) then
 				CreatePcdFiltersFrame()
@@ -1378,9 +1539,9 @@ function CreateBroker()
 			GameTooltip:Show()
 		end,
 	};
-	PCDLDB = LDB:NewDataObject("PCD", data);
+	PCDLDB = LDB:NewDataObject("PCD", pcdLdbData);
     if LDB and PCDLDBIcon and PCDLDB then
-        PCDLDBIcon:Register("PCD", data, PcdDb["settings"])
+        PCDLDBIcon:Register("PCD", pcdLdbData, pcdLdbData)
         if not pcdShowMinimapButton then
             logIfLevel(2, "called hide on minimap button from create broker.")
             C_Timer.After(0.5, function()
@@ -1388,13 +1549,19 @@ function CreateBroker()
             end)
         end
     end
+    return pcdLdbData
 end
 
 function UpdateMinimapButton(tooltip, usingPanel)
 	local _, relativeTo = tooltip:GetPoint();
 	if (doUpdateMinimapButton and (usingPanel or relativeTo and relativeTo:GetName() == "LibDBIcon10_PCD")) then
         tooltip:ClearLines()
-		tooltip:AddLine("Profession CD Tracker");
+        local colors = GetColorOfLowestCd()
+        local header = "PCD"
+        if colors then
+            header = RGBATableToColorString(colors, "PCD")
+        end
+		tooltip:AddLine(header);
         tooltip:AddLine(" ");
         AddCooldownsToTooltip(tooltip)
         tooltip:AddLine(" ");
@@ -1402,10 +1569,20 @@ function UpdateMinimapButton(tooltip, usingPanel)
 		tooltip:AddLine("|cFF9CD6DERight-Click|r Show Options");
 		tooltip:AddLine("|cFF9CD6DEShift Left-Click|r Show filters");
 		tooltip:AddLine("|cFF9CD6DEShift Right-Click|r Reset All Data");
+        tooltip:AddLine(DescribeCdColors())
 		C_Timer.After(1, function()
 			UpdateMinimapButton(tooltip, usingPanel);
 		end)
 	end
+end
+
+function CreateCharSpellText(charAndRealm, spellName, cooldownText)
+    local charName = GetTextBefore(charAndRealm, ":")
+    local classColorString = GetClassColorString(charAndRealm)
+
+    local result = classColorString .. charName .. STD_WHITE .. " - " .. spellName
+    if cooldownText then return result .. cooldownText
+    else return result end
 end
 
 function AddCooldownsToTooltip(tooltip)
@@ -1425,8 +1602,8 @@ function AddCooldownsToTooltip(tooltip)
             local charName = GetTextBefore(line[1], ":")
             if ShouldShowProf(charAndRealm, spellId) then
                 local cColorString = GetClassColorString(charAndRealm)
-                local spellName = CamelCase(GetCdNameFromSpellId(spellId))
-                tooltip:AddDoubleLine(cColorString .. charName .. STD_WHITE .. " - " .. spellName, "" .. cooldownText.text, 1, 1, 1, cooldownText.color[1], cooldownText.color[2], cooldownText.color[3])
+                local spellName = RGBATableToColorString(cooldownText.color, CamelCase(GetCdNameFromSpellId(spellId)))
+                tooltip:AddDoubleLine(CreateCharSpellText(charAndRealm, spellName), "" .. cooldownText.text, 1, 1, 1, cooldownText.color[1], cooldownText.color[2], cooldownText.color[3])
             else
                 logIfLevel(1, "skipped " .. charName .. " - " .. spellId)
             end
@@ -1434,30 +1611,90 @@ function AddCooldownsToTooltip(tooltip)
     end
 end
 
-function GetCooldownText(cooldown)
-    local cooldownText = {}
-    local cdText = ""
+
+NOT_READY =   { 0.9,  0,    0,    1} -- red
+LONG_TIME =   { 0.97, 0.43, 0.13, 1} -- orange
+MEDIUM_TIME = { 1,    1,    0.03, 1} -- yellow
+SOON_READY  = { 0,    0.76, 0.95, 1} -- blue
+READY =       { 0,    0.9,  0,    1} -- green
+
+TimeCategoryToColorMap = {
+    [1] = READY,
+    [2] = SOON_READY,
+    [3] = MEDIUM_TIME,
+    [4] = LONG_TIME,
+    [5] = NOT_READY
+}
+
+TimeLimits = {
+    [1] = 0,
+    [2] = 4,
+    [3] = 8,
+    [4] = 24
+}
+
+function GetCdTimeCategory(cooldown)
     local secondsLeft = cooldown - GetServerTime()
     local hoursLeft = secondsLeft / 3600
-    local cdColor
-    if cooldown and hoursLeft <= 0 then
-        cdText = "Ready"
-        cdColor = { 0, 233 / 255, 0, 1}
-    else
-        if (hoursLeft > 24) then
-            cdColor = { 233 / 255, 0, 0, 1}
-            cdText = cdText .. math.floor(hoursLeft / 24) .. " d "
-        else
-            cdColor = { 1, 1, 10 / 255, 1}
+    return GetHoursLeftTimeCategory(hoursLeft)
+end
+
+function GetHoursLeftTimeCategory(hoursLeft)
+    local max = 0
+    local sortedTimeLimits = SortByKey(TimeLimits)
+    for k, v in pairs(sortedTimeLimits) do
+        if (hoursLeft <= v) then
+            return k
         end
-
-        cdText = cdText .. math.floor(hoursLeft % 24) .. " h "
-        cdText = cdText .. math.floor((hoursLeft % 1) * 60) .. " m"
+        max = k
     end
+    return max + 1
+end
 
-    cooldownText["text"] = cdText
-    cooldownText["color"] = cdColor
-    return cooldownText
+function GetCdColor(cooldown)
+    local category = GetCdTimeCategory(cooldown)
+    color = TimeCategoryToColorMap[category]
+    return color
+end
+
+function GetHoursLeftColor(hoursLeft)
+    return TimeCategoryToColorMap[GetHoursLeftTimeCategory(hoursLeft)]
+end
+
+-- /script print(DescribeCdColors())
+function DescribeCdColors()
+    text = ""
+    local max = 0
+    local sortedTimeLimits = SortByKey(TimeLimits)
+    for k, v in pairs(sortedTimeLimits) do
+        local t
+        if v == 0 then t = "Ready  " else t = v .. "h  " end
+        max = v
+        text = text .. RGBATableToColorString(GetHoursLeftColor(v), t)
+    end
+    return text .. RGBATableToColorString(GetHoursLeftColor(max + 1), ">" .. max .. "h")
+end
+
+function GetCdAsText(cooldown)
+    local secondsLeft = cooldown - GetServerTime()
+    local hoursLeft = secondsLeft / 3600
+    if hoursLeft <= 0 then return "Ready"
+    else
+        cdText = ""
+        if hoursLeft >= 24 then cdText = cdText .. math.floor(hoursLeft / 24) .. " d " end
+        if math.floor(hoursLeft % 24) ~= 0 then
+            cdText = cdText .. math.floor(hoursLeft % 24) .. " h "
+        end
+        cdText = cdText .. math.floor((hoursLeft % 1) * 60) .. " m "
+        return cdText
+    end
+end
+
+function GetCooldownText(cooldown)
+    cd = {}
+    cd.text  = GetCdAsText(cooldown)
+    cd.color = GetCdColor(cooldown)
+    return cd
 end
 
 SLASH_PCD1 = "/pcd"
@@ -1508,3 +1745,5 @@ SlashCmdList["PCD"] = function(msg)
         print ("'/pcd " .. msg .. "' is not a valid pcd command")
     end
 end
+
+C_Timer.NewTicker(4, UpdateColorOfIconAndLDBString)
