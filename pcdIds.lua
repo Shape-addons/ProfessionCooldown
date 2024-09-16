@@ -381,6 +381,21 @@ function GetCdNamesToConsider()
 end
 
 PcdCdsToConsider = GetCdNamesToConsider()
+
+function SortByKey(t, sortfunction)
+    local tkeys = {}
+    for k in pairs(t) do table.insert(tkeys, k) end
+
+    local sorting
+    if sortfunction then sorting = sortfunction else sorting = function (a, b) return a < b end end
+    table.sort(tkeys, sortfunction)
+    local sortedTable = {}
+    for k, v in pairs(tkeys) do
+        sortedTable[k] = t[k]
+    end
+    return sortedTable
+end
+
 function GetSortedProfessions()
     local tkeys = {}
     for k in pairs(PcdCdsToConsider) do table.insert(tkeys, k) end
