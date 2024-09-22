@@ -395,20 +395,22 @@ function UpdateCharacterProfessionDb()
         if (isHeader and skillName == TRADE_SKILLS) then
             section = 2;
         end
-        skillName = skillName:lower()
-        if (not isHeader and section == 2) then
-            logIfLevel (1, "found " .. skillName .. " with primary count " .. primaryCount)
-            if (localizedSkillNames[skillName]) then
-                logIfLevel(1, "localized skill name: " .. localizedSkillNames[skillName] .. " for user locale " .. userLocale)
-            end
-            if (primaryCount < 3 and skillName) and localizedSkillNames[skillName] ~= nil and #profs <= 2 then
-                logIfLevel(2, "added " .. skillName .. " to PCD database.")
-                primaryCount = primaryCount + 1;
-                local pcdSkillData = {
-                    profName = localizedSkillNames[skillName]
-                }
-                pcdSkillData.skillLevel = skillRank
-                table.insert(profs, pcdSkillData)
+        if skillName then 
+            skillName = skillName:lower()
+            if (not isHeader and section == 2) then
+                logIfLevel (1, "found " .. skillName .. " with primary count " .. primaryCount)
+                if (localizedSkillNames[skillName]) then
+                    logIfLevel(1, "localized skill name: " .. localizedSkillNames[skillName] .. " for user locale " .. userLocale)
+                end
+                if (primaryCount < 3 and skillName) and localizedSkillNames[skillName] ~= nil and #profs <= 2 then
+                    logIfLevel(2, "added " .. skillName .. " to PCD database.")
+                    primaryCount = primaryCount + 1;
+                    local pcdSkillData = {
+                        profName = localizedSkillNames[skillName]
+                    }
+                    pcdSkillData.skillLevel = skillRank
+                    table.insert(profs, pcdSkillData)
+                end
             end
         end
     end
