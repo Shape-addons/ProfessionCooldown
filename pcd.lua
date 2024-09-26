@@ -1551,7 +1551,7 @@ function CreateBroker()
 	};
 	PCDLDB = LDB:NewDataObject("PCD", pcdLdbData);
     if LDB and PCDLDBIcon and PCDLDB then
-        PCDLDBIcon:Register("PCD", pcdLdbData, pcdLdbData)
+        PCDLDBIcon:Register("PCD", pcdLdbData, PcdDb["settings"])
         if not pcdShowMinimapButton then
             logIfLevel(2, "called hide on minimap button from create broker.")
             C_Timer.After(0.5, function()
