@@ -75,8 +75,8 @@ PCDL = {
         [pcdReceiveItem] = pcdReceiveItem
     },
     ["deDE"] = {
-        ["alchemie"] = alchemy,
-        ["juwelierskunst"] = jewelcrafting,
+        ["alchimie"] = alchemy,
+        ["juwelenschleifen"] = jewelcrafting,
         ["lederverarbeitung"] = leatherworking,
         ["schneiderei"] = tailoring,
         ["verzauberkunst"] = enchanting,
@@ -124,9 +124,9 @@ PCDL = {
     },
     ["itIT"] = {
         ["alchimia"] = alchemy,
-        ["oreficeria"] = jewelcrafting,
+        ["jewelcrafting"] = jewelcrafting,
         ["conciatura"] = leatherworking,
-        ["sartoria"] = tailoring,
+        ["tailoring"] = tailoring,
         ["incantamento"] = enchanting,
         ["runografia"] = inscription,
         ["estrazione"] = mining,
