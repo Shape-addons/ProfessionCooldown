@@ -56,6 +56,10 @@ allTransmuteIds = {
     78866, -- living elements
     80244, -- Pyrium Bar
     80243, -- Truegold
+
+    -- all Mop transmutes
+    114780, -- Living Steel
+    114783, -- Trillium bar - no cd
 }
 -- vanilla
 moonclothId = 18560
@@ -144,6 +148,45 @@ forgedDocumentsItemId = 63276
 
 forgedDocumentsId = forgedDocumentsHordeId -- just to fetch name
 
+-- mop
+imperialSilkId = 125557
+imperialSilkItemId = 82447 -- using the item icon
+
+magnificenceOfLeatherId = 140040 -- using the item icon
+magnificenceOfScalesId = 140041 -- using the item icon
+magnificentHideItemId = 72163
+
+scrollOfWisdomId = 112996
+scrollOfWisdomItemId = 79731
+
+lightningSteelIngotId = 138646
+lightningSteelIngotItemId = 94111 -- using the item icon
+
+riversHeartId = 131593
+riversHeartItemId = 76138 -- using the item icon
+
+primordialRubyId = 131686
+primordialRubyItemId = 76131 -- using the item icon
+
+sunsRadianceId = 131695
+sunsRadianceItemId = 76142 -- using the item icon
+
+vermilionOnyxId = 131690
+vermilionOnyxItemId = 76140 -- using the item icon
+
+imperialAmethystId = 131691
+imperialAmethystItemId = 76141 -- using the item icon
+
+wildJadeId = 131688
+wildJadeItemId = 76139 -- using the item icon
+
+serpentsHeartId = 140050
+serpentsHeartItemId = 95469 -- using the item icon
+
+jardsPeculiarEnergySourceId = 139176
+jardsPeculiarEnergySourceItemId = 94113
+
+
 local function GetBorderColorFromSpellIdInternal(spellId) 
     if spellId == dreamOfHyjalId then return 61, 191, 31
     elseif spellId == dreamOfDeepholmId then return 123, 74, 18
@@ -171,6 +214,13 @@ function GetItemIconFromSpellId(spellId)
     elseif spellId == brilliantGlassId then return brilliantGlassItemId
     elseif spellId == icyPrismId then return icyPrismItemId
     elseif spellId == firePrismId then return firePrismItemId
+    elseif spellId == riversHeartId then return riversHeartItemId
+    elseif spellId == primordialRubyId then return primordialRubyItemId
+    elseif spellId == sunsRadianceId then return sunsRadianceItemId
+    elseif spellId == vermilionOnyxId then return vermilionOnyxItemId
+    elseif spellId == imperialAmethystId then return imperialAmethystItemId
+    elseif spellId == wildJadeId then return wildJadeItemId
+    elseif spellId == serpentsHeartId then return serpentsHeartItemId
     
     elseif spellId == moonclothId then return moonclothItemId
     
@@ -185,14 +235,23 @@ function GetItemIconFromSpellId(spellId)
     
     elseif spellId == dreamOfAzsharaId or spellId == dreamOfSkywallId or spellId == dreamOfRagnarosId or spellId == dreamOfDeepholmId or spellId == dreamOfHyjalId
     then return dreamClothItemId
+
+    elseif spellId == imperialSilkId then return imperialSilkItemId
     
     elseif spellId == titanSteelId then return titanStellItemId
+    elseif spellId == lightningSteelIngotId then return lightningSteelIngotItemId
 
     elseif spellId == voidSphereId then return voidSphereItemId
     elseif spellId == prismaticSphereId then return prismaticSphereItemId
 
     elseif spellId == saltShakerItemId then return saltShakerItemId
+    elseif spellId == magnificenceOfLeatherId or spellId == magnificenceOfScalesId then return magnificentHideItemId
+
     elseif spellId == forgedDocumentsAllianceId or spellId == forgedDocumentsHordeId then return forgedDocumentsItemId
+    elseif spellId == scrollOfWisdomId then return scrollOfWisdomItemId
+    
+    elseif spellId == jardsPeculiarEnergySourceId then return jardsPeculiarEnergySourceItemId
+
     else logIfLevel(2, "GetItemIconFromSpellId - not found " .. spellId) end
 end
 
@@ -234,13 +293,22 @@ allTailoringIds = {
     dreamOfSkywallId,
     dreamOfRagnarosId,
     dreamOfDeepholmId,
-    dreamOfHyjalId
+    dreamOfHyjalId,
+    -- mop
+    imperialSilkId
 }
 
 allJewelcraftingIds = {
     brilliantGlassId, -- tbc
     icyPrismId, -- wotlk
-    firePrismId -- cata
+    firePrismId, -- cata
+    riversHeartId, -- mop
+    primordialRubyId, -- mop
+    sunsRadianceId, -- mop
+    vermilionOnyxId, -- mop
+    imperialAmethystId, -- mop
+    wildJadeId, -- mop
+    serpentsHeartId, -- mop
 }
 
 allEnchantingIds = {
@@ -249,18 +317,26 @@ allEnchantingIds = {
 }
 
 allInscriptionIds = {
-    minorInscriptionResearchId,
-    northrendInscriptionResearchId,
-    forgedDocumentsAllianceId,
-    forgedDocumentsHordeId
+    minorInscriptionResearchId, -- wotlk
+    northrendInscriptionResearchId, -- wotlk
+    forgedDocumentsAllianceId, -- cata
+    forgedDocumentsHordeId, -- cata
+    scrollOfWisdomId, -- mop
 }
 
 allMiningIds = {
-    titanSteelId
+    titanSteelId, -- wotlk
+    lightningSteelIngotId, -- mop
 }
 
 allLeatherWorkingIds = {
-    saltShakerItemId
+    saltShakerItemId,
+    magnificenceOfLeatherId, -- mop
+    magnificenceOfScalesId -- mop
+}
+
+allEngineeringIds = {
+    jardsPeculiarEnergySourceId -- mop
 }
 
 function GetProfessionNameForSpellId(spellId)
@@ -278,6 +354,8 @@ function GetProfessionNameForSpellId(spellId)
         return "alchemy"
     elseif ListContains(spellId, allLeatherWorkingIds) then
         return "leatherworking"
+    elseif ListContains(spellId, allEngineeringIds) then
+        return "engineering"
     else logIfLevel (2, "GetProfessionNameForSpellId - not found" .. spellId)
     end
 end
@@ -291,6 +369,7 @@ function GetProfessionSortKey(spellId)
     elseif (professionName == "enchanting") then return 5
     elseif (professionName == "mining") then return 6
     elseif (professionName == "leatherworking") then return 7
+    elseif (professionName == "engineering") then return 8
     else logIfLevel (2, "GetProfessionSortKey - not found " .. professionName)
     end
 end
@@ -318,6 +397,7 @@ function IsVersion(x) return x == WOW_PROJECT_ID end
 function IsTbcOrLater() return WOW_PROJECT_ID >= 5 end
 function IsWrathOrLater() return WOW_PROJECT_ID >= 11 end
 function IsCataOrLater() return WOW_PROJECT_ID >= 14 end
+function IsMopOrLater() return WOW_PROJECT_ID >= 19 end
 
 local vanillaNamesToConsider = {
     [saltShakerItemId] = IsVersion(WOW_PROJECT_CLASSIC),
@@ -356,6 +436,21 @@ local cataCdNamesToConsider = {
     [forgedDocumentsId] = IsCataOrLater()
 }
 
+local mopCdNamesToConsider = {
+    [imperialSilkId] = IsMopOrLater(),
+    [magnificenceOfLeatherId] = IsMopOrLater(),
+    [scrollOfWisdomId] = IsMopOrLater(),
+    [lightningSteelIngotId] = IsMopOrLater(),
+    [riversHeartId] = IsMopOrLater(),
+    [primordialRubyId] = IsMopOrLater(),
+    [sunsRadianceId] = IsMopOrLater(),
+    [vermilionOnyxId] = IsMopOrLater(),
+    [imperialAmethystId] = IsMopOrLater(),
+    [wildJadeId] = IsMopOrLater(),
+    [serpentsHeartId] = IsMopOrLater(),
+    [jardsPeculiarEnergySourceId] = IsMopOrLater(),
+}
+
 function GetCdNamesToConsider()
     local concatTable = {}
 
@@ -376,7 +471,9 @@ function GetCdNamesToConsider()
     if IsCataOrLater() then
         for n,v in pairs(cataCdNamesToConsider) do addIfTrue(n, v) end
     end
-
+    if IsMopOrLater() then
+        for n,v in pairs(mopCdNamesToConsider) do addIfTrue(n, v) end
+    end
     return concatTable
 end
 
