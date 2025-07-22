@@ -266,6 +266,9 @@ function GetCooldownsFromSpellIds()
                 SetCooldownForSpell("dream of deepholm", "tailoring", dreamOfDeepholmId)
                 SetCooldownForSpell("dream of hyjal", "tailoring", dreamOfHyjalId)
             end
+            if tailoringSkill >= 525 then
+                SetCooldownForSpell("imperial silk", "tailoring", imperialSilkId)
+            end
         end
         if PcdDb[charName]["professions"]["jewelcrafting"] then
             logIfLevel(1, "Jewelcrafting found")
@@ -278,6 +281,15 @@ function GetCooldownsFromSpellIds()
             end
             if jcSkill >= 500 then
                 SetCooldownForSpell("fire prism", "jewelcrafting", firePrismId)
+            end
+            if jcSkill >= 600 then
+                SetCooldownForSpell("river's heart", "jewelcrafting", riversHeartId)
+                SetCooldownForSpell("primordial ruby", "jewelcrafting", primordialRubyId)
+                SetCooldownForSpell("sun's radiance", "jewelcrafting", sunsRadianceId)
+                SetCooldownForSpell("vermilion onyx", "jewelcrafting", vermilionOnyxId)
+                SetCooldownForSpell("imperial amethyst", "jewelcrafting", imperialAmethystId)
+                SetCooldownForSpell("wild jade", "jewelcrafting", wildJadeId)
+                SetCooldownForSpell("serpent's heart", "jewelcrafting", serpentsHeartId)
             end
         end
         if PcdDb[charName]["professions"]["enchanting"] then
@@ -292,6 +304,10 @@ function GetCooldownsFromSpellIds()
             local leatherworkingSkill = PcdDb[charName]["professions"]["leatherworking"]["skill"]
             if leatherworkingSkill >= 250 then
                 SetCooldownForSpell("salt shaker", "leatherworking", saltShakerItemId)
+            end
+            local magnificentHideCd = GetLargestCd({magnificenceOfLeatherId, magnificenceOfScalesId})
+            if leatherworkingSkill >= 500 then
+                SetCooldownTo(magnificenceOfLeatherId, "leatherworking", magnificentHideCd)
             end
         end
         if PcdDb[charName]["professions"]["inscription"] then
@@ -309,12 +325,25 @@ function GetCooldownsFromSpellIds()
                     SetCooldownTo(forgedDocumentsId, "inscription", forgedDocsCd)
                 end
             end
+            if inscriptionSkill >= 540 then
+                SetCooldownForSpell("scroll of wisdom", "inscription", scrollOfWisdomId)
+            end
         end
-        if PcdDb[charName]["professions"]["inscription"] then
+        if PcdDb[charName]["professions"]["mining"] then
             logIfLevel(1, "Mining found")
-            local miningSkill = PcdDb[charName]["professions"]["inscription"]["skill"]
+            local miningSkill = PcdDb[charName]["professions"]["mining"]["skill"]
             if miningSkill >= 450 then -- wotlk only
-                SetCooldownForSpell("smelt titansteel", "inscription", titanSteelId)
+                SetCooldownForSpell("smelt titansteel", "mining", titanSteelId)
+            end
+            if miningSkill >= 500 then
+                SetCooldownForSpell("lightning steel ingot", "mining", lightningSteelIngotId)
+            end
+        end
+        if PcdDb[charName]["professions"]["engineering"] then
+            logIfLevel(1, "Engineering found")
+            local engineeringSkill = PcdDb[charName]["professions"]["engineering"]["skill"]
+            if engineeringSkill >= 600 then
+                SetCooldownForSpell("jard's peculiar energy source", "engineering", jardsPeculiarEnergySourceId)
             end
         end
     end
