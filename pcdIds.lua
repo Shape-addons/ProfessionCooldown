@@ -186,6 +186,8 @@ serpentsHeartItemId = 95469 -- using the item icon
 jardsPeculiarEnergySourceId = 139176
 jardsPeculiarEnergySourceItemId = 94113
 
+shaCrystalId = 116499
+shaCrystalItemId = 74248
 
 local function GetBorderColorFromSpellIdInternal(spellId) 
     if spellId == dreamOfHyjalId then return 61, 191, 31
@@ -243,6 +245,7 @@ function GetItemIconFromSpellId(spellId)
 
     elseif spellId == voidSphereId then return voidSphereItemId
     elseif spellId == prismaticSphereId then return prismaticSphereItemId
+    elseif spellId == shaCrystalId then return shaCrystalItemId
 
     elseif spellId == saltShakerItemId then return saltShakerItemId
     elseif spellId == magnificenceOfLeatherId or spellId == magnificenceOfScalesId then return magnificentHideItemId
@@ -313,7 +316,8 @@ allJewelcraftingIds = {
 
 allEnchantingIds = {
     prismaticSphereId,
-    voidSphereId
+    voidSphereId,
+    shaCrystalId, -- mop
 }
 
 allInscriptionIds = {
@@ -449,6 +453,7 @@ local mopCdNamesToConsider = {
     [wildJadeId] = IsMopOrLater(),
     [serpentsHeartId] = IsMopOrLater(),
     [jardsPeculiarEnergySourceId] = IsMopOrLater(),
+    [shaCrystalId] = IsMopOrLater(),
 }
 
 function GetCdNamesToConsider()

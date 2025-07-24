@@ -298,6 +298,9 @@ function GetCooldownsFromSpellIds()
             if enchantingSkill >= 350 then
                 SetCooldownForSpell("void sphere", "enchanting", voidSphereId)
             end
+            if enchantingSkill >= 485 then
+                SetCooldownForSpell("sha crystal", "enchanting", shaCrystalId)
+            end
         end
         if PcdDb[charName]["professions"]["leatherworking"] then
             logIfLevel(1, "leatherworking found")
