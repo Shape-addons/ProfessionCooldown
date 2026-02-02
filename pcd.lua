@@ -338,8 +338,15 @@ function GetCooldownsFromSpellIds()
             if miningSkill >= 450 then -- wotlk only
                 SetCooldownForSpell("smelt titansteel", "mining", titanSteelId)
             end
-            if miningSkill >= 500 then
-                SetCooldownForSpell("lightning steel ingot", "mining", lightningSteelIngotId)
+        end
+        if PcdDb[charName]["professions"]["blacksmith"] then
+            logIfLevel(1, "Blacksmithing found")
+            local blacksmithSkill = PcdDb[charName]["professions"]["blacksmith"]["skill"]
+            if blacksmithSkill >= 500 then
+                SetCooldownForSpell("balanced trillium ingot", "blacksmith", balancedTrilliumIngotId)
+            end
+            if blacksmithSkill >= 600 then
+                SetCooldownForSpell("lightning steel ingot", "blacksmith", lightningSteelIngotId)
             end
         end
         if PcdDb[charName]["professions"]["engineering"] then
