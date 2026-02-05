@@ -121,7 +121,7 @@ icyPrismId = 62242
 icyPrismItemId = 44943
 
 titanSteelId = 55208
-titanStellItemId = 37663
+titanSteelItemId = 37663
 
 glacialBagId = 56005
 glacialBagItemId = 41600
@@ -159,8 +159,11 @@ magnificentHideItemId = 72163
 scrollOfWisdomId = 112996
 scrollOfWisdomItemId = 79731
 
-lightningSteelIngotId = 138646
-lightningSteelIngotItemId = 94111 -- using the item icon
+balancedTrilliumIngotId = 138646
+balancedTrilliumIngotItemId = 94111 -- using the item icon
+
+lightningSteelIngotId = 139170
+lightningSteelIngotItemId = 95416 -- using the item icon
 
 riversHeartId = 131593
 riversHeartItemId = 76138 -- using the item icon
@@ -240,7 +243,8 @@ function GetItemIconFromSpellId(spellId)
 
     elseif spellId == imperialSilkId then return imperialSilkItemId
     
-    elseif spellId == titanSteelId then return titanStellItemId
+    elseif spellId == titanSteelId then return titanSteelItemId
+    elseif spellId == balancedTrilliumIngotId then return balancedTrilliumIngotItemId
     elseif spellId == lightningSteelIngotId then return lightningSteelIngotItemId
 
     elseif spellId == voidSphereId then return voidSphereItemId
@@ -330,7 +334,11 @@ allInscriptionIds = {
 
 allMiningIds = {
     titanSteelId, -- wotlk
-    lightningSteelIngotId, -- mop
+}
+
+allBlacksmithingIds = {
+    balancedTrilliumIngotId, -- mop
+    lightningSteelIngotId -- mop
 }
 
 allLeatherWorkingIds = {
@@ -342,6 +350,7 @@ allLeatherWorkingIds = {
 allEngineeringIds = {
     jardsPeculiarEnergySourceId -- mop
 }
+
 
 function GetProfessionNameForSpellId(spellId)
     if (ListContains(spellId, allMiningIds)) then
@@ -360,6 +369,8 @@ function GetProfessionNameForSpellId(spellId)
         return "leatherworking"
     elseif ListContains(spellId, allEngineeringIds) then
         return "engineering"
+    elseif ListContains(spellId, allBlacksmithingIds) then
+        return "blacksmith"
     else logIfLevel (2, "GetProfessionNameForSpellId - not found" .. spellId)
     end
 end
@@ -374,6 +385,7 @@ function GetProfessionSortKey(spellId)
     elseif (professionName == "mining") then return 6
     elseif (professionName == "leatherworking") then return 7
     elseif (professionName == "engineering") then return 8
+    elseif (professionName == "blacksmith") then return 9
     else logIfLevel (2, "GetProfessionSortKey - not found " .. professionName)
     end
 end
@@ -444,6 +456,7 @@ local mopCdNamesToConsider = {
     [imperialSilkId] = IsMopOrLater(),
     [magnificenceOfLeatherId] = IsMopOrLater(),
     [scrollOfWisdomId] = IsMopOrLater(),
+    [balancedTrilliumIngotId] = IsMopOrLater(),
     [lightningSteelIngotId] = IsMopOrLater(),
     [riversHeartId] = IsMopOrLater(),
     [primordialRubyId] = IsMopOrLater(),
