@@ -370,7 +370,7 @@ function GetProfessionNameForSpellId(spellId)
     elseif ListContains(spellId, allEngineeringIds) then
         return "engineering"
     elseif ListContains(spellId, allBlacksmithingIds) then
-        return "blacksmith"
+        return "blacksmithing"
     else logIfLevel (2, "GetProfessionNameForSpellId - not found" .. spellId)
     end
 end
@@ -385,7 +385,7 @@ function GetProfessionSortKey(spellId)
     elseif (professionName == "mining") then return 6
     elseif (professionName == "leatherworking") then return 7
     elseif (professionName == "engineering") then return 8
-    elseif (professionName == "blacksmith") then return 9
+    elseif (professionName == "blacksmithing") then return 9
     else logIfLevel (2, "GetProfessionSortKey - not found " .. professionName)
     end
 end
