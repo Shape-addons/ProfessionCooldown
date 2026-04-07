@@ -1,0 +1,13 @@
+## Interface: 20505
+## Title: Profession Cooldown Tracker
+## Version: 1.36
+## Notes: Tool to track profession cooldowns across characters on your account.
+## Author: Shapeshift
+## DefaultState: enabled
+## SavedVariables: PcdDb
+embeds.xml
+pcdIds.lua
+pcdlocale.lua
+pcdCore.lua
+pcdFilters.lua
+pcd.lua
